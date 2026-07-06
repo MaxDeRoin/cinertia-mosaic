@@ -189,9 +189,27 @@ Settings, profiles, and the session are stored per user in
 ## Remote control (Stream Deck / Bitfocus Companion)
 
 Enable **TCP remote control** in settings (default port **9955**; the
-green dot confirms it's listening). In Companion, add a **Generic
-TCP/UDP** connection to this PC's IP on that port, then put commands on
-buttons — one per line, case-insensitive:
+green dot confirms it's listening).
+
+### The native Companion module (recommended)
+
+A dedicated **Cinertia Mosaic** Companion module ships with the project
+(`companion-module\companion-module-cinertia-mosaic`). It gives you
+profile dropdowns fed live from Mosaic, ready-made preset buttons for
+every profile and layout, **active-profile button feedback** (the
+button lights while its profile is live, however it was switched), and
+variables like `$(mosaic:current_profile)`.
+
+To sideload it: in the Companion launcher, open the settings cog and
+set the **Developer modules path** to the project's
+`companion-module` folder, then add a **Cinertia Mosaic** connection in
+Companion's web UI and enter Mosaic's IP and port.
+
+### The generic fallback
+
+Any controller that can send raw TCP text works. In Companion, add a
+**Generic TCP/UDP** connection to this PC's IP on that port, then put
+commands on buttons — one per line, case-insensitive:
 
 | Command | Action |
 |---|---|
