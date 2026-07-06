@@ -12,17 +12,19 @@ approval from the NDI team, so everything internal uses this codename for now.
 Easy to rename later.
 
 ## Current status
-**Milestone 5 complete and signed off.** Display modes (Windowed /
-Fullscreen with monitor picker / Windowless with edge-resize), always on
-top, collapsible sidebar (auto-collapses in fullscreen/windowless, left
-edge hover brings it back), settings panel via the gear icon, Esc returns
-to windowed. Layout presets live in the bottom status bar. Tile layouts
-scale with the canvas so mode switches keep the arrangement.
-Next: **Milestone 6 — polish/persistence**: profiles (named layout +
-source + view bundles), save/load, restore last session, premade broadcast
-multiview layouts, snap-grid shown while dragging, per-tile options,
-About dialog. Later: hotkeys and Stream Deck/Companion remote control.
-(Rotation is Alt+scroll — Ctrl is reserved for snapping; pinch = zoom.)
+**Milestone 6a — profiles & persistence (awaiting Max's test).**
+Profiles live in the sidebar: type a name, hit Save, click a profile to
+switch instantly (sources shared between profiles never reconnect).
+The session autosaves every 5 seconds and restores on launch — verified
+to survive even a hard process kill. New premade layouts 4×4 and 2+8
+(classic production multiview). The snap grid appears on the canvas only
+while dragging/resizing with snapping on. Saved files live in
+`C:\Users\Max\AppData\Roaming\Cinertia Systems\Mosaic\`.
+Still to come in Milestone 6: per-tile options (name overlay, audio
+meter, low-bandwidth toggle), About dialog with NDI compliance items.
+Later: hotkeys and Stream Deck/Companion remote control.
+(Milestones 1–5 signed off. Rotation is Alt+scroll — Ctrl is snapping;
+pinch = zoom.)
 
 ## A bug worth remembering (fixed 2026-07-06)
 Sources seemed to vanish when switching display modes. Root cause: QML
