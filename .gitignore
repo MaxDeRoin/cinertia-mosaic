@@ -10,3 +10,6 @@ out/
 # Windows
 desktop.ini
 Thumbs.db
+
+# Tool logs
+aqtinstall.log
