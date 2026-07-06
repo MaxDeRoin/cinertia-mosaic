@@ -292,7 +292,10 @@ void NdiVideoItem::wheelEvent(QWheelEvent *event)
     if (notches == 0.0)
         return;
 
-    if (event->modifiers() & Qt::ControlModifier)
+    // Ctrl+scroll only rotates when explicitly enabled; otherwise it zooms,
+    // which is what a trackpad pinch (delivered as Ctrl+scroll on Windows)
+    // should do.
+    if (m_wheelRotateEnabled && (event->modifiers() & Qt::ControlModifier))
         m_rotation = std::fmod(m_rotation + notches * kRotateStepDeg, 360.0);
     else
         setZoomAt(m_zoom * std::pow(kZoomStepFactor, notches),
@@ -300,6 +303,14 @@ void NdiVideoItem::wheelEvent(QWheelEvent *event)
 
     viewUpdated();
     event->accept();
+}
+
+void NdiVideoItem::setWheelRotateEnabled(bool enabled)
+{
+    if (enabled == m_wheelRotateEnabled)
+        return;
+    m_wheelRotateEnabled = enabled;
+    emit wheelRotateEnabledChanged();
 }
 
 void NdiVideoItem::mousePressEvent(QMouseEvent *event)

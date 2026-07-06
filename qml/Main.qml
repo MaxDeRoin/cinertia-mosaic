@@ -272,7 +272,7 @@ ApplicationWindow {
                 }
                 Text {
                     anchors.centerIn: parent
-                    text: "Scroll = zoom · Drag = pan · Ctrl+scroll = rotate · Double-click = reset"
+                    text: "Scroll or pinch = zoom · Drag = pan · Double-click = reset"
                     color: "#5a5a60"
                     font.pixelSize: 10
                     visible: areaHover.hovered
