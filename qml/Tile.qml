@@ -19,6 +19,9 @@ Item {
     property bool showName: true
     property bool showMeter: false
     property bool lowBw: false
+    // Custom label (e.g. "CAM 1 — STAGE LEFT"); empty = show source name.
+    property string customName: ""
+    readonly property string displayName: customName !== "" ? customName : sourceName
     // True while the user drags/resizes this tile with snapping engaged —
     // the canvas shows the snap grid while any tile has this set.
     property bool snapDragActive: false
@@ -105,7 +108,7 @@ Item {
                 anchors.rightMargin: 8
                 verticalAlignment: Text.AlignVCenter
                 horizontalAlignment: Text.AlignHCenter
-                text: tile.sourceName
+                text: tile.displayName
                 color: "#e8e8ea"
                 font.pixelSize: 11
                 elide: Text.ElideRight
@@ -192,7 +195,7 @@ Item {
                 anchors.left: parent.left
                 anchors.leftMargin: 8
                 width: parent.width - controls.width - 24
-                text: tile.sourceName
+                text: tile.displayName
                 color: "#d8d8dc"
                 font.pixelSize: 11
                 elide: Text.ElideRight
@@ -371,6 +374,43 @@ Item {
                 anchors.right: parent.right
                 anchors.margins: 8
                 spacing: 4
+
+                Text {
+                    text: "TILE NAME"
+                    color: "#5a5a60"
+                    font.pixelSize: 9
+                }
+                Rectangle {
+                    width: optsCol.width
+                    height: 24
+                    radius: 2
+                    color: "#101013"
+                    border.width: 1
+                    border.color: renameInput.activeFocus ? "#3d7eff" : "#2a2a2e"
+
+                    TextInput {
+                        id: renameInput
+                        anchors.fill: parent
+                        anchors.margins: 4
+                        color: "#d8d8dc"
+                        font.pixelSize: 11
+                        selectByMouse: true
+                        clip: true
+                        text: tile.customName
+                        onTextEdited: tile.customName = text
+                    }
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        anchors.left: parent.left
+                        anchors.leftMargin: 4
+                        anchors.right: parent.right
+                        text: tile.sourceName
+                        color: "#5a5a60"
+                        font.pixelSize: 11
+                        elide: Text.ElideRight
+                        visible: renameInput.text === "" && !renameInput.activeFocus
+                    }
+                }
 
                 OptCheck {
                     label: "Source name"

@@ -155,7 +155,8 @@ ApplicationWindow {
                 view: it.viewState(),
                 showName: it.showName,
                 showMeter: it.showMeter,
-                lowBw: it.lowBw
+                lowBw: it.lowBw,
+                customName: it.customName
             })
         }
         return arr
@@ -189,6 +190,7 @@ ApplicationWindow {
             it.showName = t.showName !== false
             it.showMeter = t.showMeter === true
             it.lowBw = t.lowBw === true
+            it.customName = t.customName || ""
         }
         window.topZ = maxZ + 1
         canvas.selectedTile = null
@@ -845,7 +847,7 @@ ApplicationWindow {
                     anchors.right: presetRow.left
                     anchors.rightMargin: 12
                     text: canvas.selectedTile
-                          ? canvas.selectedTile.sourceName
+                          ? canvas.selectedTile.displayName
                           : tileModel.count + " tile" + (tileModel.count === 1 ? "" : "s")
                     color: "#d8d8dc"
                     font.pixelSize: 11
