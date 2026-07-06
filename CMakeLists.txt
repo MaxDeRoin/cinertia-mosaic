@@ -7,7 +7,7 @@ project(Mosaic VERSION 0.1.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(Qt6 6.5 REQUIRED COMPONENTS Quick)
+find_package(Qt6 6.5 REQUIRED COMPONENTS Quick Network)
 
 qt_standard_project_setup(REQUIRES 6.5)
 qt_policy(SET QTP0004 NEW)
@@ -43,6 +43,10 @@ qt_add_qml_module(Mosaic
     SOURCES
         src/Storage.h
         src/Storage.cpp
+        src/PowerGuard.h
+        src/PowerGuard.cpp
+        src/RemoteControl.h
+        src/RemoteControl.cpp
         src/ndi/NdiFinder.h
         src/ndi/NdiFinder.cpp
         src/ndi/NdiVideoItem.h
@@ -50,7 +54,7 @@ qt_add_qml_module(Mosaic
 )
 
 target_include_directories(Mosaic PRIVATE "${NDI_SDK_DIR}/Include" src src/ndi)
-target_link_libraries(Mosaic PRIVATE Qt6::Quick "${NDI_SDK_LIB}")
+target_link_libraries(Mosaic PRIVATE Qt6::Quick Qt6::Network "${NDI_SDK_LIB}")
 
 # The NDI DLL ships in the app folder — never the system path (license terms).
 if(WIN32)

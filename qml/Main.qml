@@ -14,6 +14,58 @@ ApplicationWindow {
 
     NdiFinder { id: finder }
     Storage { id: storage }
+    PowerGuard { keepAwake: window.neverSleep }
+
+    RemoteControl {
+        id: remote
+        enabled: window.remoteEnabled
+        port: window.remotePort
+        onCommandReceived: (command, argument) => {
+            let ok = true
+            switch (command) {
+            case "profile": {
+                const p = window.profiles.find(
+                    x => x.name.toLowerCase() === argument.toLowerCase())
+                if (p)
+                    window.applyProfile(p.name)
+                else
+                    ok = false
+                break
+            }
+            case "profileindex": {
+                const i = parseInt(argument) - 1
+                if (!isNaN(i) && i >= 0 && i < window.profiles.length)
+                    window.applyProfile(window.profiles[i].name)
+                else
+                    ok = false
+                break
+            }
+            case "layout":
+                switch (argument.toLowerCase()) {
+                case "2x2": window.applyGrid(2); break
+                case "3x3": window.applyGrid(3); break
+                case "4x4": window.applyGrid(4); break
+                case "1+side": window.applyOnePlusSide(); break
+                case "2+8": window.applyTwoPlusEight(); break
+                default: ok = false
+                }
+                break
+            case "mode":
+                switch (argument.toLowerCase()) {
+                case "windowed": window.displayMode = 0; break
+                case "fullscreen": window.displayMode = 1; break
+                case "windowless": window.displayMode = 2; break
+                default: ok = false
+                }
+                break
+            case "ping":
+                break
+            default:
+                ok = false
+            }
+            remote.reply(ok ? "OK" : "ERR " + command)
+        }
+    }
 
     // ------------------------------------------------------ app state
     // Which sources are on the canvas. Tile positions live on the tile
@@ -26,6 +78,11 @@ ApplicationWindow {
     property int tileGap: 8
     // Master switch for all tile name labels.
     property bool showTileNames: true
+    // Keep the display awake (show-day mode).
+    property bool neverSleep: false
+    // TCP remote control for Stream Deck / Bitfocus Companion.
+    property bool remoteEnabled: false
+    property int remotePort: 9955
 
     // Display modes: 0 = windowed, 1 = fullscreen, 2 = windowless
     property int displayMode: 0
@@ -117,11 +174,26 @@ ApplicationWindow {
     }
 
     // Focused key catcher — Shortcut proved unreliable with nothing else
-    // holding keyboard focus, so this item owns focus and handles Esc.
+    // holding keyboard focus, so this item owns focus and handles all
+    // hotkeys: Esc, F11 fullscreen, Ctrl+1..9 profile switching.
     Item {
         id: keyCatcher
         focus: true
         Keys.onEscapePressed: window.escapePressed()
+        Keys.onPressed: event => {
+            if (event.key === Qt.Key_F11) {
+                window.displayMode = window.displayMode === 1 ? 0 : 1
+                event.accepted = true
+                return
+            }
+            if ((event.modifiers & Qt.ControlModifier)
+                    && event.key >= Qt.Key_1 && event.key <= Qt.Key_9) {
+                const idx = event.key - Qt.Key_1
+                if (idx < window.profiles.length)
+                    window.applyProfile(window.profiles[idx].name)
+                event.accepted = true
+            }
+        }
     }
 
     function sourceOnCanvas(name) {
@@ -270,6 +342,9 @@ ApplicationWindow {
             wheelRotateOn: wheelRotateOn,
             tileGap: tileGap,
             showTileNames: showTileNames,
+            neverSleep: neverSleep,
+            remoteEnabled: remoteEnabled,
+            remotePort: remotePort,
             currentProfile: currentProfile,
             tiles: captureTiles()
         }))
@@ -299,6 +374,10 @@ ApplicationWindow {
                 if (s.tileGap !== undefined)
                     tileGap = s.tileGap
                 showTileNames = s.showTileNames !== false
+                neverSleep = s.neverSleep === true
+                remoteEnabled = s.remoteEnabled === true
+                if (s.remotePort !== undefined)
+                    remotePort = s.remotePort
                 currentProfile = s.currentProfile || ""
                 applyTiles(s.tiles || [])
             }
@@ -1166,6 +1245,49 @@ ApplicationWindow {
                 checked: window.showTileNames
                 onToggled: window.showTileNames = !window.showTileNames
             }
+            CheckRow {
+                label: "Keep display awake"
+                checked: window.neverSleep
+                onToggled: window.neverSleep = !window.neverSleep
+            }
+
+            Text {
+                text: "REMOTE CONTROL (COMPANION / STREAM DECK)"
+                color: "#5a5a60"
+                font.pixelSize: 10
+            }
+            CheckRow {
+                label: "Enable TCP remote control"
+                checked: window.remoteEnabled
+                onToggled: window.remoteEnabled = !window.remoteEnabled
+            }
+            Row {
+                spacing: 6
+
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "Port"
+                    color: "#8a8a90"
+                    font.pixelSize: 11
+                }
+                NumBox { id: portBox; value: window.remotePort }
+                ToolBtn {
+                    label: "Set"
+                    onActivated: {
+                        const p = parseInt(portBox.text)
+                        if (!isNaN(p) && p > 0 && p < 65536)
+                            window.remotePort = p
+                        portBox.value = window.remotePort
+                    }
+                }
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: remote.listening ? "● listening"
+                         : window.remoteEnabled ? "● port busy?" : ""
+                    color: remote.listening ? "#40d060" : "#ff6060"
+                    font.pixelSize: 11
+                }
+            }
 
             Text {
                 text: "TILE SPACING (LAYOUTS)"
@@ -1202,7 +1324,7 @@ ApplicationWindow {
 
             Text {
                 width: parent.width
-                text: "Scroll = zoom · Drag = move tile (pans when zoomed in) · Alt+scroll = rotate · Corners = resize · Ctrl = snap · Esc = windowed"
+                text: "Scroll = zoom · Drag = move tile (pans when zoomed in) · Alt+scroll = rotate · Corners = resize · Ctrl = snap · Esc = windowed · F11 = fullscreen · Ctrl+1–9 = profiles"
                 color: "#5a5a60"
                 font.pixelSize: 10
                 wrapMode: Text.WordWrap

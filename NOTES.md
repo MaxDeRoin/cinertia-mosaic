@@ -33,8 +33,22 @@ Installs to Program Files with the Qt runtime and the NDI DLL bundled in
 the app folder (per the NDI license), Start Menu entry, optional desktop
 icon, proper app icon and version info, no debug console window.
 Rebuild it any time with `scripts\stage-deploy.ps1`.
-Later: hotkeys, Stream Deck/Companion remote control, never-sleep
-setting, tile renaming (all in the CLAUDE.md roadmap).
+**Show-day features (awaiting Max's test):** tile renaming (⋯ menu),
+never-sleep ("Keep display awake" in settings), hotkeys (Ctrl+1–9 switch
+profiles in list order, F11 toggles fullscreen, Esc returns to windowed),
+and TCP remote control for Bitfocus Companion / Stream Deck.
+
+## Remote control protocol (Companion "Generic TCP" module)
+Enable in settings, default port 9955. One command per line:
+| Command | What it does |
+|---|---|
+| `PROFILE Show A` | switch to a profile by name |
+| `PROFILEINDEX 2` | switch to the 2nd profile in the list |
+| `LAYOUT 2x2` | apply a layout (2x2, 3x3, 4x4, 1+side, 2+8) |
+| `MODE fullscreen` | display mode (windowed, fullscreen, windowless) |
+| `PING` | connectivity check |
+Mosaic replies `OK` or `ERR ...` per command. Commands are
+case-insensitive.
 
 ## New files for the installer
 | File / folder | What it is |
