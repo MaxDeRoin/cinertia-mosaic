@@ -76,6 +76,10 @@ public:
     Q_INVOKABLE void applyCropFromItemRect(const QRectF &itemRect);
     Q_INVOKABLE void clearCrop();
 
+    // Snapshot/restore of the whole view for profiles and session restore.
+    Q_INVOKABLE QVariantMap viewState() const;
+    Q_INVOKABLE void setViewState(const QVariantMap &state);
+
 signals:
     void sourceNameChanged();
     void statusChanged();

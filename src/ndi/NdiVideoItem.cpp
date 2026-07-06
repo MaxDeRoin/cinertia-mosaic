@@ -227,6 +227,40 @@ void NdiVideoItem::applyCropFromItemRect(const QRectF &itemRect)
     viewUpdated();
 }
 
+QVariantMap NdiVideoItem::viewState() const
+{
+    return {
+        { QStringLiteral("zoom"), m_zoom },
+        { QStringLiteral("panX"), m_pan.x() },
+        { QStringLiteral("panY"), m_pan.y() },
+        { QStringLiteral("rotation"), m_rotation },
+        { QStringLiteral("cropX"), m_crop.x() },
+        { QStringLiteral("cropY"), m_crop.y() },
+        { QStringLiteral("cropW"), m_crop.width() },
+        { QStringLiteral("cropH"), m_crop.height() },
+    };
+}
+
+void NdiVideoItem::setViewState(const QVariantMap &state)
+{
+    m_zoom = qBound(kMinZoom, state.value(QStringLiteral("zoom"), 1.0).toReal(),
+                    kMaxZoom);
+    m_pan = QPointF(state.value(QStringLiteral("panX"), 0.0).toReal(),
+                    state.value(QStringLiteral("panY"), 0.0).toReal());
+    m_rotation = state.value(QStringLiteral("rotation"), 0.0).toReal();
+
+    QRectF crop(state.value(QStringLiteral("cropX"), 0.0).toReal(),
+                state.value(QStringLiteral("cropY"), 0.0).toReal(),
+                state.value(QStringLiteral("cropW"), 1.0).toReal(),
+                state.value(QStringLiteral("cropH"), 1.0).toReal());
+    crop = crop.intersected(QRectF(0, 0, 1, 1));
+    m_crop = (crop.width() < kMinCropSize || crop.height() < kMinCropSize)
+        ? QRectF(0, 0, 1, 1)
+        : crop;
+
+    viewUpdated();
+}
+
 void NdiVideoItem::clearCrop()
 {
     m_crop = QRectF(0, 0, 1, 1);

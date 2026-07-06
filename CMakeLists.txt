@@ -36,6 +36,8 @@ qt_add_qml_module(Mosaic
         qml/Main.qml
         qml/Tile.qml
     SOURCES
+        src/Storage.h
+        src/Storage.cpp
         src/ndi/NdiFinder.h
         src/ndi/NdiFinder.cpp
         src/ndi/NdiVideoItem.h

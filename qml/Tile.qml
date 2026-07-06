@@ -14,7 +14,13 @@ Item {
     property bool cropMode: false
     property bool wheelRotate: true
     property bool sizeOpen: false
+    // True while the user drags/resizes this tile with snapping engaged —
+    // the canvas shows the snap grid while any tile has this set.
+    property bool snapDragActive: false
     readonly property string status: video.status
+
+    function viewState() { return video.viewState() }
+    function setViewState(s) { video.setViewState(s) }
 
     signal closeRequested()
     signal selectRequested()
@@ -46,15 +52,19 @@ Item {
             onPositionChanged: mouse => {
                 if (!pressed)
                     return
+                const doSnap = tile.snapEnabled || (mouse.modifiers & Qt.ControlModifier)
+                tile.snapDragActive = doSnap
                 let nx = tile.x + mouse.x - pressPos.x
                 let ny = tile.y + mouse.y - pressPos.y
-                if (tile.snapEnabled || (mouse.modifiers & Qt.ControlModifier)) {
+                if (doSnap) {
                     nx = tile.snap(nx)
                     ny = tile.snap(ny)
                 }
                 tile.x = Math.max(0, Math.min(nx, tile.parent.width - tile.width))
                 tile.y = Math.max(0, Math.min(ny, tile.parent.height - tile.height))
             }
+            onReleased: tile.snapDragActive = false
+            onCanceled: tile.snapDragActive = false
         }
 
         MoveArea {
@@ -280,6 +290,8 @@ Item {
                 pressScene = mapToItem(tile.parent, mouse.x, mouse.y)
                 startGeom = Qt.rect(tile.x, tile.y, tile.width, tile.height)
             }
+            onReleased: tile.snapDragActive = false
+            onCanceled: tile.snapDragActive = false
             onPositionChanged: mouse => {
                 if (!pressed)
                     return
@@ -294,7 +306,8 @@ Item {
                 if (onTop)  { ny = startGeom.y + dy; nh = startGeom.height - dy }
                 else        { nh = startGeom.height + dy }
 
-                if (tile.snapEnabled || (mouse.modifiers & Qt.ControlModifier)) {
+                tile.snapDragActive = tile.snapEnabled || (mouse.modifiers & Qt.ControlModifier)
+                if (tile.snapDragActive) {
                     if (onLeft) { const s = tile.snap(nx); nw += nx - s; nx = s }
                     else        { nw = tile.snap(nx + nw) - nx }
                     if (onTop)  { const s = tile.snap(ny); nh += ny - s; ny = s }

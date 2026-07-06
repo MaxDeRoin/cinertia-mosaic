@@ -13,6 +13,7 @@ ApplicationWindow {
     color: "#0e0e10"
 
     NdiFinder { id: finder }
+    Storage { id: storage }
 
     // ------------------------------------------------------ app state
     // Which sources are on the canvas. Tile positions live on the tile
@@ -114,6 +115,150 @@ ApplicationWindow {
         return false
     }
 
+    // ------------------------------------------------------- profiles
+    // A profile bundles sources + tile layout + per-tile views. Applying
+    // one is diff-based: tiles whose source is in both profiles keep
+    // their receiver running, so switching feels instant during a show.
+    property var profiles: []
+    property string currentProfile: ""
+
+    function findTileItem(name) {
+        for (let i = 0; i < tileRepeater.count; i++) {
+            const it = tileRepeater.itemAt(i)
+            if (it && it.sourceName === name)
+                return it
+        }
+        return null
+    }
+
+    // Geometry is stored normalized (0..1 of canvas size) so a profile
+    // saved windowed applies cleanly in fullscreen and vice versa.
+    function captureTiles() {
+        const arr = []
+        for (let i = 0; i < tileRepeater.count; i++) {
+            const it = tileRepeater.itemAt(i)
+            if (!it)
+                continue
+            arr.push({
+                source: it.sourceName,
+                x: it.x / canvas.width,
+                y: it.y / canvas.height,
+                w: it.width / canvas.width,
+                h: it.height / canvas.height,
+                z: it.z,
+                view: it.viewState()
+            })
+        }
+        return arr
+    }
+
+    function applyTiles(tiles) {
+        if (!tiles)
+            return
+        const targetNames = tiles.map(t => t.source)
+        for (let i = tileModel.count - 1; i >= 0; i--) {
+            if (targetNames.indexOf(tileModel.get(i).name) === -1)
+                tileModel.remove(i)
+        }
+        for (const t of tiles) {
+            if (!sourceOnCanvas(t.source))
+                tileModel.append({ name: t.source })
+        }
+        let maxZ = 0
+        for (const t of tiles) {
+            const it = findTileItem(t.source)
+            if (!it)
+                continue
+            it.x = t.x * canvas.width
+            it.y = t.y * canvas.height
+            it.width = Math.max(it.minW, t.w * canvas.width)
+            it.height = Math.max(it.minH, t.h * canvas.height)
+            it.z = t.z || 0
+            maxZ = Math.max(maxZ, it.z)
+            if (t.view)
+                it.setViewState(t.view)
+        }
+        window.topZ = maxZ + 1
+        canvas.selectedTile = null
+    }
+
+    function saveProfilesFile() {
+        storage.save("profiles.json",
+                     JSON.stringify({ version: 1, profiles: profiles }))
+    }
+
+    function saveProfile(name) {
+        name = name.trim()
+        if (name === "")
+            return
+        const p = { name: name, tiles: captureTiles() }
+        const idx = profiles.findIndex(x => x.name === name)
+        if (idx >= 0)
+            profiles[idx] = p
+        else
+            profiles.push(p)
+        profiles = profiles.slice() // new array so QML sees the change
+        currentProfile = name
+        saveProfilesFile()
+    }
+
+    function applyProfile(name) {
+        const p = profiles.find(x => x.name === name)
+        if (!p)
+            return
+        applyTiles(p.tiles)
+        currentProfile = name
+    }
+
+    function deleteProfile(name) {
+        profiles = profiles.filter(x => x.name !== name)
+        if (currentProfile === name)
+            currentProfile = ""
+        saveProfilesFile()
+    }
+
+    // ------------------------------------------------- session restore
+    function saveSession() {
+        storage.save("session.json", JSON.stringify({
+            version: 1,
+            snapOn: snapOn,
+            wheelRotateOn: wheelRotateOn,
+            currentProfile: currentProfile,
+            tiles: captureTiles()
+        }))
+    }
+
+    Component.onCompleted: {
+        try {
+            const p = JSON.parse(storage.load("profiles.json") || "{}")
+            if (p.profiles)
+                profiles = p.profiles
+        } catch (e) {
+            console.warn("Could not read profiles.json:", e)
+        }
+        try {
+            const s = JSON.parse(storage.load("session.json") || "null")
+            if (s) {
+                snapOn = s.snapOn === true
+                wheelRotateOn = s.wheelRotateOn !== false
+                currentProfile = s.currentProfile || ""
+                applyTiles(s.tiles || [])
+            }
+        } catch (e) {
+            console.warn("Could not read session.json:", e)
+        }
+    }
+
+    onClosing: saveSession()
+
+    // Autosave so a crash or power loss never costs the arrangement.
+    Timer {
+        interval: 5000
+        running: true
+        repeat: true
+        onTriggered: window.saveSession()
+    }
+
     function toggleSource(name) {
         for (let i = 0; i < tileModel.count; i++) {
             if (tileModel.get(i).name === name) {
@@ -169,6 +314,43 @@ ApplicationWindow {
             it.y = gut + (i - 1) * (ch + gut)
             it.width = colW
             it.height = ch
+        }
+    }
+
+    // Classic production multiview: two large monitors on top (preview /
+    // program), the rest in rows of four below.
+    function applyTwoPlusEight() {
+        const n = tileRepeater.count
+        if (n === 0)
+            return
+        const gut = 8
+        const topN = Math.min(2, n)
+        const rest = n - topN
+        const topH = rest > 0 ? (canvas.height - 2 * gut) * 0.55
+                              : canvas.height - 2 * gut
+        const tw = (canvas.width - gut * (topN + 1)) / topN
+        for (let i = 0; i < topN; i++) {
+            const it = tileRepeater.itemAt(i)
+            it.x = gut + i * (tw + gut)
+            it.y = gut
+            it.width = tw
+            it.height = topH
+        }
+        if (rest > 0) {
+            const cols = 4
+            const rows = Math.ceil(rest / cols)
+            const bottomY = gut + topH + gut
+            const bh = (canvas.height - bottomY - gut * rows) / rows
+            const bw = (canvas.width - gut * (cols + 1)) / cols
+            for (let i = 0; i < rest; i++) {
+                const it = tileRepeater.itemAt(topN + i)
+                const c = i % cols
+                const r = Math.floor(i / cols)
+                it.x = gut + c * (bw + gut)
+                it.y = bottomY + r * (bh + gut)
+                it.width = bw
+                it.height = bh
+            }
         }
     }
 
@@ -260,7 +442,7 @@ ApplicationWindow {
                 ListView {
                     id: sourceList
                     width: parent.width
-                    height: parent.height - y - footer.height - 16
+                    height: parent.height - y - profilesSec.height - footer.height - 32
                     clip: true
                     spacing: 4
                     model: finder.sources
@@ -307,6 +489,118 @@ ApplicationWindow {
                             // overlays above (settings panel) also fire here.
                             gesturePolicy: TapHandler.ReleaseWithinBounds
                             onTapped: window.toggleSource(parent.modelData)
+                        }
+                    }
+                }
+
+                // -------------------------------------------- profiles
+                Column {
+                    id: profilesSec
+                    width: parent.width
+                    spacing: 4
+
+                    Text {
+                        text: "PROFILES"
+                        color: "#5a5a60"
+                        font.pixelSize: 10
+                    }
+
+                    Repeater {
+                        model: window.profiles
+
+                        delegate: Rectangle {
+                            required property var modelData
+                            readonly property bool isActive:
+                                window.currentProfile === modelData.name
+                            width: profilesSec.width
+                            height: 30
+                            radius: 3
+                            color: isActive ? "#22303e"
+                                 : profHover.hovered ? "#1c1c20" : "transparent"
+                            border.width: 1
+                            border.color: isActive ? "#3d7eff" : "#26262b"
+
+                            Text {
+                                anchors.verticalCenter: parent.verticalCenter
+                                anchors.left: parent.left
+                                anchors.right: delBtn.left
+                                anchors.margins: 10
+                                text: parent.modelData.name
+                                color: "#d8d8dc"
+                                font.pixelSize: 12
+                                elide: Text.ElideRight
+                            }
+                            Text {
+                                id: delBtn
+                                anchors.verticalCenter: parent.verticalCenter
+                                anchors.right: parent.right
+                                anchors.rightMargin: 8
+                                text: "✕"
+                                color: delHover.hovered ? "#ff6060" : "#5a5a60"
+                                font.pixelSize: 13
+                                visible: profHover.hovered
+
+                                HoverHandler { id: delHover }
+                                TapHandler {
+                                    gesturePolicy: TapHandler.ReleaseWithinBounds
+                                    onTapped: window.deleteProfile(
+                                        delBtn.parent.modelData.name)
+                                }
+                            }
+
+                            HoverHandler { id: profHover }
+                            TapHandler {
+                                gesturePolicy: TapHandler.ReleaseWithinBounds
+                                onTapped: window.applyProfile(parent.modelData.name)
+                            }
+                        }
+                    }
+
+                    Row {
+                        width: parent.width
+                        spacing: 4
+
+                        Rectangle {
+                            width: parent.width - saveBtn.width - 4
+                            height: 28
+                            radius: 3
+                            color: "#101013"
+                            border.width: 1
+                            border.color: profName.activeFocus ? "#3d7eff" : "#26262b"
+
+                            TextInput {
+                                id: profName
+                                anchors.fill: parent
+                                anchors.margins: 6
+                                color: "#d8d8dc"
+                                font.pixelSize: 12
+                                selectByMouse: true
+                                clip: true
+                            }
+                            Text {
+                                anchors.verticalCenter: parent.verticalCenter
+                                anchors.left: parent.left
+                                anchors.leftMargin: 6
+                                text: window.currentProfile !== ""
+                                      ? window.currentProfile : "profile name"
+                                color: "#5a5a60"
+                                font.pixelSize: 12
+                                visible: profName.text === "" && !profName.activeFocus
+                            }
+                        }
+                        ToolBtn {
+                            id: saveBtn
+                            label: "Save"
+                            height: 28
+                            onActivated: {
+                                const name = profName.text.trim() !== ""
+                                    ? profName.text : window.currentProfile
+                                if (name.trim() === "")
+                                    return
+                                window.saveProfile(name)
+                                profName.text = ""
+                                keyCatcher.forceActiveFocus()
+                            }
                         }
                     }
                 }
@@ -403,6 +697,37 @@ ApplicationWindow {
                 font.pixelSize: 16
             }
 
+            // Snap grid: appears only while a tile is being dragged or
+            // resized with snapping engaged (Max's spec).
+            property int snapDragCount: 0
+
+            Canvas {
+                id: snapGrid
+                anchors.fill: parent
+                visible: canvas.snapDragCount > 0
+                opacity: 0.55
+                onVisibleChanged: if (visible) requestPaint()
+                onWidthChanged: requestPaint()
+                onHeightChanged: requestPaint()
+
+                onPaint: {
+                    const ctx = getContext("2d")
+                    ctx.clearRect(0, 0, width, height)
+                    ctx.strokeStyle = "#2a2a30"
+                    ctx.lineWidth = 1
+                    ctx.beginPath()
+                    for (let x = 16.5; x < width; x += 16) {
+                        ctx.moveTo(x, 0)
+                        ctx.lineTo(x, height)
+                    }
+                    for (let y = 16.5; y < height; y += 16) {
+                        ctx.moveTo(0, y)
+                        ctx.lineTo(width, y)
+                    }
+                    ctx.stroke()
+                }
+            }
+
             // Tiles live in their own layer so their z-order competition
             // stays among themselves — toolbar and status strip are
             // siblings drawn above this layer and can never be covered.
@@ -422,6 +747,8 @@ ApplicationWindow {
                         wheelRotate: window.wheelRotateOn
                         gridSize: 16
                         selected: canvas.selectedTile === this
+                        onSnapDragActiveChanged:
+                            canvas.snapDragCount += snapDragActive ? 1 : -1
                         Component.onCompleted: {
                             x = 24 + (index % 5) * 40
                             y = 24 + (index % 5) * 40
@@ -436,6 +763,10 @@ ApplicationWindow {
                             if (canvas.selectedTile === this)
                                 canvas.selectedTile = null
                             tileModel.remove(index)
+                        }
+                        Component.onDestruction: {
+                            if (snapDragActive)
+                                canvas.snapDragCount--
                         }
                     }
                 }
@@ -497,7 +828,9 @@ ApplicationWindow {
 
                     ToolBtn { label: "2×2"; height: 24; onActivated: window.applyGrid(2) }
                     ToolBtn { label: "3×3"; height: 24; onActivated: window.applyGrid(3) }
+                    ToolBtn { label: "4×4"; height: 24; onActivated: window.applyGrid(4) }
                     ToolBtn { label: "1+side"; height: 24; onActivated: window.applyOnePlusSide() }
+                    ToolBtn { label: "2+8"; height: 24; onActivated: window.applyTwoPlusEight() }
                     ToolBtn {
                         label: "Snap"
                         height: 24
