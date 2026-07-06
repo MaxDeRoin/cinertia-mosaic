@@ -9,6 +9,7 @@ I am an IT/AV professional, not a programmer. You (Claude) write all the code. E
 - After each build, launch the app (or tell me how) so I can verify.
 - If a library, tool, or SDK is missing, install or configure it yourself and tell me what you did.
 - Keep a running NOTES.md explaining the project structure in plain English so I always understand what exists.
+- Keep docs/USER-GUIDE.md current: every user-facing feature added or changed gets documented there in the same change, so a polished user guide can be produced at any time (Max, 2026-07-06).
 
 ## What we are building
 A professional NDI multiviewer for the AV/broadcast industry. It receives multiple NDI video streams from the network and displays them in a flexible canvas of tiles the user can freely arrange.

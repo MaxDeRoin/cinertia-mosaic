@@ -84,6 +84,7 @@ for a TapHandler missing that policy.
 |---|---|
 | `CLAUDE.md` | The project brief — goals, milestones, rules. Claude reads this every session. |
 | `NOTES.md` | This file. Plain-English map of the project. |
+| `docs/USER-GUIDE.md` | The user-facing manual — every feature documented, kept current with each change, basis for the published guide. |
 | `CMakeLists.txt` | The build recipe. Tells CMake how to compile the app and which Qt pieces it needs. |
 | `src/main.cpp` | The C++ entry point. Starts the NDI library and loads the user interface. |
 | `src/ndi/NdiFinder.h/.cpp` | Watches the network for NDI sources (checks once a second) and feeds the sidebar list. |

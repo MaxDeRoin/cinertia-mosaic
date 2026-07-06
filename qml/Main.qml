@@ -221,11 +221,18 @@ ApplicationWindow {
         }
     }
 
-    function sourceOnCanvas(name) {
+    function sourceCount(name) {
+        let count = 0
         for (let i = 0; i < tileModel.count; i++)
             if (tileModel.get(i).name === name)
-                return true
-        return false
+                count++
+        return count
+    }
+
+    // The same source may be added multiple times — e.g. several tiles
+    // each cropped to a different region of one wide camera shot.
+    function addSource(name) {
+        tileModel.append({ name: name })
     }
 
     // ------------------------------------------------------- profiles
@@ -234,15 +241,6 @@ ApplicationWindow {
     // their receiver running, so switching feels instant during a show.
     property var profiles: []
     property string currentProfile: ""
-
-    function findTileItem(name) {
-        for (let i = 0; i < tileRepeater.count; i++) {
-            const it = tileRepeater.itemAt(i)
-            if (it && it.sourceName === name)
-                return it
-        }
-        return null
-    }
 
     // Geometry is stored normalized (0..1 of canvas size) so a profile
     // saved windowed applies cleanly in fullscreen and vice versa.
@@ -273,33 +271,65 @@ ApplicationWindow {
     function applyTiles(tiles) {
         if (!tiles)
             return
-        const targetNames = tiles.map(t => t.source)
+        // Group target entries by source — duplicates are allowed, so the
+        // diff works on instance COUNTS per source. Tiles kept across the
+        // switch never reconnect; only surplus/missing instances change.
+        const target = {}
+        for (const t of tiles) {
+            if (!target[t.source])
+                target[t.source] = []
+            target[t.source].push(t)
+        }
+        const have = {}
+        for (let i = 0; i < tileModel.count; i++) {
+            const nm = tileModel.get(i).name
+            have[nm] = (have[nm] || 0) + 1
+        }
         for (let i = tileModel.count - 1; i >= 0; i--) {
-            if (targetNames.indexOf(tileModel.get(i).name) === -1)
+            const nm = tileModel.get(i).name
+            const need = target[nm] ? target[nm].length : 0
+            if (have[nm] > need) {
                 tileModel.remove(i)
+                have[nm]--
+            }
         }
-        for (const t of tiles) {
-            if (!sourceOnCanvas(t.source))
-                tileModel.append({ name: t.source })
+        for (const s in target) {
+            for (let k = have[s] || 0; k < target[s].length; k++)
+                tileModel.append({ name: s })
         }
-        let maxZ = 0
-        for (const t of tiles) {
-            const it = findTileItem(t.source)
+        // Pair surviving/new tiles with target entries per source, in
+        // order, and apply geometry, view and options.
+        const buckets = {}
+        for (let i = 0; i < tileRepeater.count; i++) {
+            const it = tileRepeater.itemAt(i)
             if (!it)
                 continue
-            it.x = t.x * canvas.width
-            it.y = t.y * canvas.height
-            it.width = Math.max(it.minW, t.w * canvas.width)
-            it.height = Math.max(it.minH, t.h * canvas.height)
-            it.z = t.z || 0
-            maxZ = Math.max(maxZ, it.z)
-            if (t.view)
-                it.setViewState(t.view)
-            it.showName = t.showName !== false
-            it.showMeter = t.showMeter === true
-            it.lowBw = t.lowBw === true
-            it.lowLat = t.lowLat === true
-            it.customName = t.customName || ""
+            if (!buckets[it.sourceName])
+                buckets[it.sourceName] = []
+            buckets[it.sourceName].push(it)
+        }
+        let maxZ = 0
+        for (const s in target) {
+            const items = buckets[s] || []
+            for (let k = 0; k < target[s].length; k++) {
+                const t = target[s][k]
+                const it = items[k]
+                if (!it)
+                    continue
+                it.x = t.x * canvas.width
+                it.y = t.y * canvas.height
+                it.width = Math.max(it.minW, t.w * canvas.width)
+                it.height = Math.max(it.minH, t.h * canvas.height)
+                it.z = t.z || 0
+                maxZ = Math.max(maxZ, it.z)
+                if (t.view)
+                    it.setViewState(t.view)
+                it.showName = t.showName !== false
+                it.showMeter = t.showMeter === true
+                it.lowBw = t.lowBw === true
+                it.lowLat = t.lowLat === true
+                it.customName = t.customName || ""
+            }
         }
         window.topZ = maxZ + 1
         canvas.selectedTile = null
@@ -421,15 +451,6 @@ ApplicationWindow {
         onTriggered: window.saveSession()
     }
 
-    function toggleSource(name) {
-        for (let i = 0; i < tileModel.count; i++) {
-            if (tileModel.get(i).name === name) {
-                tileModel.remove(i)
-                return
-            }
-        }
-        tileModel.append({ name: name })
-    }
 
     // Preset layouts arrange the tiles that are already on the canvas.
     function applyGrid(cols) {
@@ -614,7 +635,7 @@ ApplicationWindow {
                 Text {
                     text: finder.sources.length === 0
                           ? "Searching the network…"
-                          : finder.sources.length + " found — click to add/remove"
+                          : finder.sources.length + " found — click to add (again for another copy)"
                     color: "#8a8a90"
                     font.pixelSize: 11
                 }
@@ -630,18 +651,19 @@ ApplicationWindow {
                     delegate: Rectangle {
                         required property string modelData
                         // Depends on tileModel.count so it re-evaluates on
-                        // every add/remove.
-                        property bool onCanvas: {
+                        // every add/remove. Several tiles may show the
+                        // same source (different crops of one shot).
+                        property int instances: {
                             tileModel.count
-                            return window.sourceOnCanvas(modelData)
+                            return window.sourceCount(modelData)
                         }
                         width: sourceList.width
                         height: 34
                         radius: 3
-                        color: onCanvas ? "#22303e"
+                        color: instances > 0 ? "#22303e"
                              : hover.hovered ? "#1c1c20" : "transparent"
                         border.width: 1
-                        border.color: onCanvas ? "#3d7eff" : "#26262b"
+                        border.color: instances > 0 ? "#3d7eff" : "#26262b"
 
                         Text {
                             anchors.verticalCenter: parent.verticalCenter
@@ -658,9 +680,11 @@ ApplicationWindow {
                             anchors.verticalCenter: parent.verticalCenter
                             anchors.right: parent.right
                             anchors.rightMargin: 10
-                            text: parent.onCanvas ? "●" : ""
+                            text: parent.instances === 0 ? ""
+                                : parent.instances === 1 ? "●"
+                                : "● " + parent.instances
                             color: "#3d7eff"
-                            font.pixelSize: 9
+                            font.pixelSize: 10
                         }
 
                         HoverHandler { id: hover }
@@ -668,7 +692,7 @@ ApplicationWindow {
                             // Exclusive grab: without this, taps aimed at
                             // overlays above (settings panel) also fire here.
                             gesturePolicy: TapHandler.ReleaseWithinBounds
-                            onTapped: window.toggleSource(parent.modelData)
+                            onTapped: window.addSource(parent.modelData)
                         }
                     }
                 }
