@@ -59,6 +59,9 @@ A professional NDI multiviewer for the AV/broadcast industry. It receives multip
 6. **Polish** — layout save/load, per-tile options, proxy stream toggle, source name overlays, About dialog with NDI compliance items.
    - Max (2026-07-06): more layout preset options; save/load named layouts; reopen with the last view restored; premade broadcast multiview layouts (e.g. 1+3, 2+8, 4×4, classic production multiview arrangements).
    - Max (2026-07-06): while a tile is being dragged with snapping active, draw the snap grid on the canvas background — only during the drag, and only when snap mode is on.
+   - Max (2026-07-06): **profiles** — named setups bundling layout + sources + per-tile views that can be switched instantly when you need a different view of the production. Design the layout save/load around this concept.
+   - Max (2026-07-06): **hotkeys** — profile switching (and other key actions) bindable to keyboard shortcuts.
+   - Max (2026-07-06): **Stream Deck / Bitfocus Companion compatibility** — a remote-control interface (e.g. TCP or HTTP commands Companion can send) to switch profiles/layouts from a Stream Deck. Likely lands after v1 installer unless promoted; keep the profile system designed so remote triggering is easy to bolt on.
 7. **Installer** — Inno Setup .exe installer, version numbering, app icon.
 8. **(Future) macOS port** — do not build now, but never introduce Windows-only dependencies without flagging it to me.
 

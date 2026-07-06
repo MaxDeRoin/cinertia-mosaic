@@ -330,6 +330,34 @@ ApplicationWindow {
 
             property var selectedTile: null
 
+            // The canvas changes size when the window mode changes or the
+            // sidebar collapses. Scale the tile layout proportionally so
+            // the arrangement survives every switch — otherwise tiles kept
+            // absolute positions and could end up clipped out of view.
+            property size prevSize: Qt.size(0, 0)
+            onWidthChanged: rescaleTiles()
+            onHeightChanged: rescaleTiles()
+
+            function rescaleTiles() {
+                const pw = prevSize.width
+                const ph = prevSize.height
+                if (pw > 0 && ph > 0 && width > 0 && height > 0
+                        && (pw !== width || ph !== height)) {
+                    const sx = width / pw
+                    const sy = height / ph
+                    for (let i = 0; i < tileRepeater.count; i++) {
+                        const it = tileRepeater.itemAt(i)
+                        if (!it)
+                            continue
+                        it.x *= sx
+                        it.y *= sy
+                        it.width = Math.max(it.minW, it.width * sx)
+                        it.height = Math.max(it.minH, it.height * sy)
+                    }
+                }
+                prevSize = Qt.size(width, height)
+            }
+
             HoverHandler { id: canvasHover }
 
             // Click empty canvas to deselect.
