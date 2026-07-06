@@ -47,8 +47,18 @@ Enable in settings, default port 9955. One command per line:
 | `LAYOUT 2x2` | apply a layout (2x2, 3x3, 4x4, 1+side, 2+8) |
 | `MODE fullscreen` | display mode (windowed, fullscreen, windowless) |
 | `PING` | connectivity check |
-Mosaic replies `OK` or `ERR ...` per command. Commands are
+| `PROFILES?` | replies `PROFILES ["Show A","Show B"]` (JSON list) |
+| `STATUS?` | replies `STATUS {"profile":"Show A","mode":"windowed","tiles":3}` |
+Mosaic replies `OK` or `ERR ...` per action command. Commands are
 case-insensitive.
+
+Mosaic also **pushes state changes** to every connected client, no matter
+what caused them (sidebar click, hotkey, another controller):
+- `EVENT PROFILE Show A` — active profile changed
+- `EVENT PROFILES ["..."]` — the profile list changed
+- `EVENT MODE fullscreen` — display mode changed
+This is the foundation for a future native Companion module with active-
+profile button feedback (see CLAUDE.md roadmap).
 
 ## New files for the installer
 | File / folder | What it is |

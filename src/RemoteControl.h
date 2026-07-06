@@ -32,6 +32,9 @@ public:
 
     // Send a response line to the client that issued the last command.
     Q_INVOKABLE void reply(const QString &line);
+    // Push a line to every connected client — used for EVENT messages so
+    // controllers (Companion) can track state they didn't change.
+    Q_INVOKABLE void broadcast(const QString &line);
 
 signals:
     void enabledChanged();

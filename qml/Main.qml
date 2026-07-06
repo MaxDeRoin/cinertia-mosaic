@@ -23,6 +23,19 @@ ApplicationWindow {
         onCommandReceived: (command, argument) => {
             let ok = true
             switch (command) {
+            case "profiles":
+            case "profiles?":
+                remote.reply("PROFILES "
+                    + JSON.stringify(window.profiles.map(p => p.name)))
+                return
+            case "status":
+            case "status?":
+                remote.reply("STATUS " + JSON.stringify({
+                    profile: window.currentProfile,
+                    mode: window.modeName(),
+                    tiles: tileModel.count
+                }))
+                return
             case "profile": {
                 const p = window.profiles.find(
                     x => x.name.toLowerCase() === argument.toLowerCase())
@@ -86,12 +99,24 @@ ApplicationWindow {
 
     // Display modes: 0 = windowed, 1 = fullscreen, 2 = windowless
     property int displayMode: 0
+    function modeName() {
+        return ["windowed", "fullscreen", "windowless"][displayMode]
+    }
+
+    // State push for remote controllers: whenever the active profile, the
+    // profile list, or the display mode changes — regardless of what
+    // caused it — every connected client hears about it, so Companion
+    // buttons can highlight the active profile.
+    onCurrentProfileChanged: remote.broadcast("EVENT PROFILE " + currentProfile)
+    onProfilesChanged: remote.broadcast(
+        "EVENT PROFILES " + JSON.stringify(profiles.map(p => p.name)))
     property bool alwaysOnTop: false
     property int fsScreenIndex: 0
     property bool sidebarCollapsed: false
     property bool settingsOpen: false
 
     onDisplayModeChanged: {
+        remote.broadcast("EVENT MODE " + modeName())
         // Sidebar gets out of the way in fullscreen/windowless (Max's spec);
         // the left-edge hover strip brings it back on demand.
         sidebarCollapsed = displayMode !== 0

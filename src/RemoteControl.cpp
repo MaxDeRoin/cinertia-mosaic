@@ -94,3 +94,12 @@ void RemoteControl::reply(const QString &line)
     if (m_lastClient && m_lastClient->state() == QTcpSocket::ConnectedState)
         m_lastClient->write(line.toUtf8() + '\n');
 }
+
+void RemoteControl::broadcast(const QString &line)
+{
+    const QByteArray data = line.toUtf8() + '\n';
+    for (auto it = m_buffers.keyBegin(); it != m_buffers.keyEnd(); ++it) {
+        if ((*it)->state() == QTcpSocket::ConnectedState)
+            (*it)->write(data);
+    }
+}
