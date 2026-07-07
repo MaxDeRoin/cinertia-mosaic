@@ -20,3 +20,4 @@ aqtinstall.log
 companion-module/**/node_modules/
 companion-module/**/*.tgz
 companion-module/**/pkg/
+docs/guide-src/Mosaic User Guide.pdf

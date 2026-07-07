@@ -116,7 +116,7 @@
     <div class="cover">
         <img src="../../resources/mosaic-logo.png" alt="Mosaic logo">
         <div>
-            <div class="title">Mosaic <span class="badge">v0.2.0</span></div>
+            <div class="title">Mosaic <span class="badge">v0.3.0</span></div>
             <div class="subtitle">Professional NDI® Multiviewer &nbsp;·&nbsp; User Guide &nbsp;·&nbsp; Cinertia Systems</div>
         </div>
     </div>
@@ -127,7 +127,7 @@
     <h2>Installation</h2>
     <div class="card">
         <ol>
-            <li>Run <code>Mosaic-Setup-0.2.0.exe</code> on 64-bit Windows 10 or 11 and follow the wizard. Everything Mosaic needs is included — there is nothing else to install.</li>
+            <li>Run <code>Mosaic-Setup-0.3.0.exe</code> on 64-bit Windows 10 or 11 and follow the wizard. Everything Mosaic needs is included — there is nothing else to install.</li>
             <li>Launch <strong>Mosaic</strong> from the Start Menu (or the optional desktop icon).</li>
             <li>The first time Mosaic runs, <strong>Windows Firewall</strong> will ask for network access — click <strong>Allow</strong>. NDI® discovery and video need it.</li>
         </ol>
@@ -145,7 +145,7 @@
     </div>
 
     <h2>The main window</h2>
-    <p><strong>Sidebar (left):</strong> NDI® sources, layout buttons, profiles, and the settings gear ⚙. Collapse it with <b>«</b>; it hides itself in fullscreen and windowless modes — move the mouse to the <strong>left screen edge</strong> and click <b>»</b> to bring it back.</p>
+    <p><strong>Sidebar (left):</strong> NDI® sources, layout buttons, canvases (multi-monitor), profiles, and the settings gear ⚙. Collapse it with <b>«</b>; it hides itself in fullscreen and windowless modes — move the mouse to the <strong>left screen edge</strong> and click <b>»</b> to bring it back.</p>
     <p><strong>Canvas:</strong> your tiles. Tiles use every pixel — there are no permanent toolbars.</p>
     <p><strong>Status bar (hidden):</strong> move the mouse to the <strong>bottom edge</strong> to peek at the selected tile's name, resolution and frame rate.</p>
     <img class="fig" src="img/fig-overview.png" alt="Main window">
@@ -181,6 +181,7 @@
         <tr><td>Audio meter</td><td>Stereo peak meters on the tile's right edge (green/yellow/red)</td></tr>
         <tr><td>Low bandwidth</td><td>Receives the NDI proxy stream — ideal for small tiles, big CPU/network savings</td></tr>
         <tr><td>Low latency</td><td>Shows frames the instant they arrive (~a frame less delay, slightly less smooth). For cueing cameras</td></tr>
+        <tr><td>Change source</td><td>Switch this tile to any discovered source <em>in place</em> — position, size, options and custom label stay put</td></tr>
     </table>
 
     <img class="fig w60" src="img/fig-options.png" alt="Tile options menu">
@@ -208,6 +209,16 @@
         <tr><td>Windowless</td><td>Frameless canvas. Drag empty canvas to move it, grab any edge to resize, pair with Always on top</td></tr>
     </table>
     <p>Your tile arrangement scales proportionally with every mode change — the layout you built is the layout you keep.</p>
+
+    <h2>Multi-monitor canvases</h2>
+    <p>Mosaic can drive more than one display: each <strong>canvas</strong> is its own window full of tiles — e.g. a producer multiview on your main screen and a clean program/preview wall on the stage-left TV.</p>
+    <ul>
+        <li><strong>Add a canvas:</strong> click <strong>+ Add</strong> under <strong>CANVASES</strong>. A new window opens ("Output 2", "Output 3", …) — on a second monitor by default when one is connected.</li>
+        <li><strong>Aim your clicks:</strong> the Canvases buttons choose which canvas sidebar source clicks and Layout presets act on. The blue source dots and the hint line ("→ Output 2") always show where new tiles will land.</li>
+        <li><strong>The canvas menu:</strong> hover an output's <strong>bottom edge</strong> and click the <b>⋯</b> button — it sits at the bottom so it can never cover a tile's menu. From there: <strong>rename</strong> the canvas (e.g. <em>STAGE LEFT WALL</em>), <strong>Send sources here</strong>, the <strong>window type</strong> (Windowed / Fullscreen / Windowless), an exact <strong>size</strong>, the <strong>monitor</strong> picker, and <strong>Close</strong>.</li>
+        <li><strong>Everything is remembered:</strong> profiles and the session store each canvas — tiles, name, window type, monitor, position. Switching profiles switches the whole multi-monitor look at once.</li>
+    </ul>
+    <div class="tip"><strong>Show-day recipe:</strong> add a canvas per display, send it fullscreen to its monitor from the ⋯ menu, fill each with sources, then save it all as one profile — a Stream Deck button now recalls every wall at once.</div>
 
     <h2>Settings <span class="accent">⚙</span></h2>
     <div class="figrow">
@@ -263,9 +274,22 @@
         <li>Learn more about NDI® at <a href="https://ndi.video/">ndi.video</a>.</li>
     </ul>
 
+    <h2>What's new</h2>
+    <h3>0.3.0 — July 2026</h3>
+    <ul>
+        <li><strong>Multi-monitor canvases:</strong> extra output windows, each its own tile canvas with a rename box, window type (Windowed / Fullscreen / Windowless), exact size and monitor picker in its bottom-edge ⋯ menu. Profiles save every canvas.</li>
+        <li><strong>Change source in place:</strong> swap any tile to another source from its ⋯ menu — position, size and options stay put.</li>
+        <li>Fixes: tile resize in windowless mode no longer moves the window; output chrome no longer flickers.</li>
+    </ul>
+    <h3>0.2.0 — July 2026</h3>
+    <ul>
+        <li>First public-ready installer. Profiles with auto-save and instant switching, hotkeys, duplicate sources, per-tile options (rename, label, audio meter, low bandwidth, low latency), premade broadcast layouts, keep-display-awake.</li>
+        <li>Stream Deck / Bitfocus Companion control: native <em>Cinertia Mosaic</em> module with live profile dropdowns and active-profile feedback, plus a generic TCP protocol.</li>
+    </ul>
+
     <div class="footer">
         <strong style="color:#8a8a90">Support:</strong> max@cinertia.systems &nbsp;·&nbsp; Cinertia.Systems<br>
-        Mosaic v0.2.0 — © 2026 Cinertia Systems. NDI® is a registered trademark of Vizrt NDI AB.
+        Mosaic v0.3.0 — © 2026 Cinertia Systems. NDI® is a registered trademark of Vizrt NDI AB.
     </div>
 
 </div>

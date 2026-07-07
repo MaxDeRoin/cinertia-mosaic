@@ -12,7 +12,12 @@ approval from the NDI team, so everything internal uses this codename for now.
 Easy to rename later.
 
 ## Current status
-**0.3.0 roadmap features (awaiting Max's test):**
+**Current release: 0.3.0** — `dist\Mosaic-Setup-0.3.0.exe`, with the
+full distribution package in `dist\Mosaic-0.3.0-Package(.zip)`:
+installer + PDF user guide + README + Companion module. Version
+history: `docs/CHANGELOG.md`.
+
+**0.3.0 features (tested and signed off by Max):**
 1. **Swap a tile's source in place** — every tile's ⋯ menu now ends
    with a CHANGE SOURCE list of everything on the network. Click one
    and the tile reconnects to it; position, size, options and custom
@@ -50,8 +55,8 @@ proxy stream for small tiles). All three stick with profiles and the
 session. The active profile also auto-saves every change now — the Save
 button is only for creating new profiles. About dialog (gear → About
 Mosaic…) carries the NDI trademark notice and ndi.video link.
-**Current release: 0.2.0** — `dist\Mosaic-Setup-0.2.0.exe` contains
-everything built so far: all v1 milestones plus profiles with autosave,
+**Previous release: 0.2.0** — `dist\Mosaic-Setup-0.2.0.exe` contains
+all v1 milestones plus profiles with autosave,
 duplicate sources (opt-in), tile renaming, per-tile options (name /
 meter / low bandwidth / low latency), hotkeys, never-sleep, and the
 Companion TCP remote control with feedback protocol.
@@ -112,6 +117,8 @@ for a TapHandler missing that policy.
 | `CLAUDE.md` | The project brief — goals, milestones, rules. Claude reads this every session. |
 | `NOTES.md` | This file. Plain-English map of the project. |
 | `docs/USER-GUIDE.md` | The user-facing manual — every feature documented, kept current with each change, basis for the published guide. |
+| `docs/CHANGELOG.md` | Version history — every user-facing change per release, newest first. Update it with each release. |
+| `docs/guide-src/` | The styled HTML that becomes the PDF user guide in the distribution package (plus its screenshots). |
 | `CMakeLists.txt` | The build recipe. Tells CMake how to compile the app and which Qt pieces it needs. |
 | `src/main.cpp` | The C++ entry point. Starts the NDI library and loads the user interface. |
 | `src/ndi/NdiFinder.h/.cpp` | Watches the network for NDI sources (checks once a second) and feeds the sidebar list. |

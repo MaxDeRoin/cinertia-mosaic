@@ -1,0 +1,95 @@
+# Mosaic Changelog
+
+All user-facing changes, newest first. Mosaic is a professional NDI®
+multiviewer by Cinertia Systems. NDI® is a registered trademark of
+Vizrt NDI AB.
+
+---
+
+## 0.3.0 — 2026-07-08
+
+### Multi-monitor canvases
+- **Extra output canvases:** the sidebar's new **Canvases** section
+  (+ Add) opens additional windows, each a full tile canvas of its
+  own — build a different multiview look on every display.
+- **Per-canvas window type:** every output canvas can be **Windowed**,
+  **Fullscreen** (with a monitor picker), or **Windowless** (frameless
+  — drag the background to move, grab any edge or corner to resize).
+- **Per-canvas ⋯ menu at the bottom edge:** hover the bottom of an
+  output canvas for its menu — placed at the bottom on purpose so it
+  can never cover a tile's header or menu. It holds: rename the
+  canvas, Send sources here, window type, exact size (width × height),
+  monitor picker, and Close.
+- **Canvas targeting:** the Canvases buttons choose which canvas
+  sidebar source clicks and layout presets act on; the sources hint
+  always shows where new tiles will land.
+- **Full persistence:** profiles and the session save every canvas —
+  tiles, name, window type, monitor and position — so a saved "look"
+  restores across all displays, and switching profiles switches the
+  whole multi-monitor setup at once.
+
+### Tiles
+- **Change source in place:** every tile's ⋯ menu ends with a
+  **Change source** list of everything on the network. Pick one and
+  the tile reconnects to it — position, size, options and custom label
+  stay put; the view resets to fit the new picture.
+
+### Fixes
+- Resizing (or cropping) a tile in windowless mode no longer drags the
+  whole window around.
+- Output window chrome no longer flickers when the mouse crosses the
+  reveal zone.
+
+---
+
+## 0.2.0 — 2026-07-07
+
+First public-ready release: a single Inno Setup installer with
+everything bundled (Qt runtime and NDI® DLL in the app folder).
+
+### Show-day features
+- **Profiles:** named setups bundling sources, layout and every
+  tile's view. Click to switch instantly — shared sources never
+  reconnect. The active profile auto-saves every change; the session
+  also autosaves every 5 seconds and survives crashes and power loss.
+- **Hotkeys:** Ctrl+1–9 switch profiles, F11 toggles fullscreen, Esc
+  returns to windowed.
+- **Stream Deck / Bitfocus Companion remote control:** TCP interface
+  (default port 9955) with commands for profiles, layouts and display
+  modes, plus live EVENT pushes for button feedback.
+- **Native Companion module:** `cinertia-mosaic` importable module
+  package — profile dropdowns fed live from Mosaic, presets for every
+  profile and layout, active-profile button feedback and
+  connection-status handling.
+- **Keep display awake:** stops Windows from blanking the monitor
+  during unattended show-day use.
+
+### Tiles and sources
+- **Per-tile options (⋯ menu):** custom tile name, source-name
+  overlay, stereo audio peak meter, low-bandwidth (NDI® proxy) mode,
+  low-latency mode.
+- **Duplicate sources (opt-in):** one source on the canvas many times
+  — e.g. several crops of a single wide shot.
+- **Premade broadcast layouts:** 2×2, 3×3, 4×4, 1+side, 2+8.
+- **Snap grid** drawn on the canvas only while dragging with snapping
+  on; **tile spacing** setting (0 = seamless video wall).
+
+### Polish
+- About dialog with NDI® compliance items and support contacts.
+- Auto-hide status bar with the selected tile's stream info.
+- Selection border fades when idle and wakes on mouse movement.
+
+---
+
+## 0.1.0 — 2026-07-06
+
+Internal milestone build — the first installer.
+
+- **NDI® source discovery** with click-to-add sidebar.
+- **Multi-tile canvas:** freely movable/resizable tiles, snap-to-grid,
+  preset layouts.
+- **GPU per-tile views:** zoom toward the cursor (10%–3200%), pan,
+  rotate (Alt+scroll or 90° buttons), stackable crops, one-click Fit.
+- **Display modes:** windowed, fullscreen with monitor picker,
+  windowless (frameless) with always-on-top; auto-collapsing sidebar.
+- **Windows installer** (Inno Setup) with app icon and version info.

@@ -6,7 +6,8 @@ freely arrangeable tiles — with per-tile zoom, crop, rotation, instantly
 switchable profiles, and Stream Deck remote control.
 
 > This document is kept up to date with every feature and is the basis
-> for the published user guide.
+> for the published user guide. Version history lives in
+> [CHANGELOG.md](CHANGELOG.md).
 
 ---
 
