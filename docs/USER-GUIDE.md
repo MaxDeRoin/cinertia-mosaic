@@ -170,10 +170,11 @@ program/preview wall on the stage-left TV.
   bottom on purpose, so it can never cover a tile's header or menu
   (those are at the top of each tile). Click it for the menu: **Send
   sources here**, the **window type** (Windowed / Fullscreen /
-  Windowless), a **monitor picker** (1, 2, 3…), and **Close this
-  canvas** (its tiles and connections are dropped). The menu opens
-  upward and floats above the tiles, so nothing overlays your pictures
-  until you open it.
+  Windowless), an exact **size** (width × height, hidden while
+  fullscreen — type the numbers and click **Set**), a **monitor
+  picker** (1, 2, 3…), and **Close this canvas** (its tiles and
+  connections are dropped). The menu opens upward and floats above the
+  tiles, so nothing overlays your pictures until you open it.
 - **Window types per canvas:** every output canvas has the same three
   modes as the main window — **Windowed** (normal window),
   **Fullscreen** (borderless, on the picked monitor), and

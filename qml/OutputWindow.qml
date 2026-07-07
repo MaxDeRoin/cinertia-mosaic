@@ -168,6 +168,12 @@ Window {
     // underneath — no click, press or drag can leak through to a tile
     // while it is open.
     property bool menuOpen: false
+    // Reclaim keyboard focus when the menu closes (e.g. after typing in
+    // a size box) so Esc and F11 keep working in this window.
+    onMenuOpenChanged: {
+        if (!menuOpen)
+            outKeys.forceActiveFocus()
+    }
 
     // Bottom-edge hover zone reveals the ⋯ button (hover only, never
     // intercepts clicks aimed at tiles).
@@ -307,6 +313,61 @@ Window {
                     label: "Windowless"
                     active: out.windowMode === 2
                     onActivated: out.modeChangeRequested(2)
+                }
+            }
+
+            // Exact canvas size, same as the main window's settings
+            // panel — hidden in fullscreen where the monitor decides.
+            Text {
+                visible: out.windowMode !== 1
+                text: "SIZE"
+                color: "#5a5a60"
+                font.pixelSize: 9
+            }
+            Row {
+                visible: out.windowMode !== 1
+                spacing: 6
+
+                component NumBox: Rectangle {
+                    property alias text: numInput.text
+                    property int value: 0
+                    width: 56
+                    height: 24
+                    radius: 2
+                    color: "#101013"
+                    border.width: 1
+                    border.color: numInput.activeFocus ? "#3d7eff" : "#2a2a2e"
+                    onValueChanged: numInput.text = value
+
+                    TextInput {
+                        id: numInput
+                        anchors.fill: parent
+                        anchors.margins: 3
+                        color: "#d8d8dc"
+                        font.pixelSize: 12
+                        horizontalAlignment: TextInput.AlignHCenter
+                        validator: IntValidator { bottom: 1; top: 16384 }
+                        selectByMouse: true
+                        text: parent.value
+                    }
+                }
+
+                NumBox { id: szW; value: out.width }
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "×"
+                    color: "#8a8a90"
+                    font.pixelSize: 12
+                }
+                NumBox { id: szH; value: out.height }
+                OutBtn {
+                    label: "Set"
+                    onActivated: {
+                        out.width = Math.max(out.minimumWidth,
+                                             parseInt(szW.text) || out.width)
+                        out.height = Math.max(out.minimumHeight,
+                                              parseInt(szH.text) || out.height)
+                    }
                 }
             }
 
