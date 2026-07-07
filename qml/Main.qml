@@ -33,7 +33,7 @@ ApplicationWindow {
                 remote.reply("STATUS " + JSON.stringify({
                     profile: window.currentProfile,
                     mode: window.modeName(),
-                    tiles: tileModel.count
+                    tiles: canvas.tileCount
                 }))
                 return
             case "profile": {
@@ -81,10 +81,8 @@ ApplicationWindow {
     }
 
     // ------------------------------------------------------ app state
-    // Which sources are on the canvas. Tile positions live on the tile
-    // items themselves while the app runs (saved layouts come later).
-    ListModel { id: tileModel }
-    property int topZ: 0
+    // Tiles live on the canvases now (see TileCanvas.qml): the main
+    // canvas plus one per extra output window (multi-monitor mode).
     property bool snapOn: false
     property bool wheelRotateOn: true
     // Gutter used by the layout templates. 0 = seamless, edge to edge.
@@ -96,20 +94,56 @@ ApplicationWindow {
     // cropped to several regions.
     property bool allowDuplicates: false
 
-    // Any mouse movement wakes the selected tile's accent so the user can
-    // always find the active tile by nudging the mouse. Wired to hover
-    // handlers on ANCESTOR items (canvas, sidebar) — a full-window overlay
-    // handler would steal hover from tile headers. Video repaints
-    // re-deliver hover with the mouse still, so only genuine position
-    // changes count, or the highlight would never fade.
-    property point lastWakePos: Qt.point(-1, -1)
-    function mouseActivity(pos) {
-        if (pos.x === lastWakePos.x && pos.y === lastWakePos.y)
-            return
-        lastWakePos = Qt.point(pos.x, pos.y)
-        if (canvas.selectedTile)
-            canvas.selectedTile.wakeHighlight()
+    // ---------------------------------------------- canvas targeting
+    // Which canvas sidebar clicks and layout buttons act on:
+    // 0 = the main canvas, 1.. = extra output windows in model order.
+    property int targetCanvas: 0
+    // Bumped whenever any canvas's tiles change (add/remove/swap) so the
+    // sidebar source dots recount.
+    property int canvasRevision: 0
+    // Set during shutdown so closing output windows doesn't delete them
+    // from the session that was just saved.
+    property bool quitting: false
+
+    function canvasAt(i) {
+        if (i === 0)
+            return canvas
+        const w = outputInst.objectAt(i - 1)
+        return w ? w.canvas : null
     }
+    function targetCanvasItem() {
+        return canvasAt(targetCanvas) || canvas
+    }
+    function targetName() {
+        return (targetCanvas === 0 || targetCanvas > outputModel.count)
+            ? "Main" : outputModel.get(targetCanvas - 1).name
+    }
+
+    function addOutput() {
+        // First extra window is "Output 2" (the main canvas is 1); pick
+        // the first free name so re-adding after a close stays tidy.
+        let n = 2
+        const used = []
+        for (let i = 0; i < outputModel.count; i++)
+            used.push(outputModel.get(i).name)
+        while (used.indexOf("Output " + n) !== -1)
+            n++
+        // Default to the next monitor over, if there is one.
+        const si = Math.min(Qt.application.screens.length - 1,
+                            outputModel.count + 1)
+        outputModel.append({ name: "Output " + n,
+                             screenIndex: si, fullscreen: false })
+        targetCanvas = outputModel.count
+    }
+
+    function removeOutput(i) {
+        if (targetCanvas === i + 1)
+            targetCanvas = 0
+        else if (targetCanvas > i + 1)
+            targetCanvas--
+        outputModel.remove(i)
+    }
+
     // Keep the display awake (show-day mode).
     property bool neverSleep: false
     // TCP remote control for Stream Deck / Bitfocus Companion.
@@ -196,19 +230,8 @@ ApplicationWindow {
             aboutOpen = false
             cancelled = true
         }
-        for (let i = 0; i < tileRepeater.count; i++) {
-            const t = tileRepeater.itemAt(i)
-            if (!t)
-                continue
-            if (t.cropMode) {
-                t.cropMode = false
-                cancelled = true
-            }
-            if (t.optsOpen || t.sizeOpen) {
-                t.closePopups()
-                cancelled = true
-            }
-        }
+        if (canvas.cancelOverlays())
+            cancelled = true
         if (settingsOpen) {
             settingsOpen = false
             cancelled = true
@@ -240,29 +263,21 @@ ApplicationWindow {
         }
     }
 
-    function sourceCount(name) {
-        let count = 0
-        for (let i = 0; i < tileModel.count; i++)
-            if (tileModel.get(i).name === name)
-                count++
-        return count
+    // Sidebar clicks act on whichever canvas is the current target.
+    function sourceClicked(name) {
+        const c = targetCanvasItem()
+        if (c)
+            c.sourceClicked(name, allowDuplicates)
+    }
+    function activeSourceCount(name) {
+        const c = targetCanvasItem()
+        return c ? c.sourceCount(name) : 0
     }
 
-    // Duplicates ON: every click adds another instance. Duplicates OFF:
-    // classic toggle — add if absent, otherwise remove every instance.
-    function sourceClicked(name) {
-        if (allowDuplicates) {
-            tileModel.append({ name: name })
-            return
-        }
-        const had = sourceCount(name) > 0
-        for (let i = tileModel.count - 1; i >= 0; i--) {
-            if (tileModel.get(i).name === name)
-                tileModel.remove(i)
-        }
-        if (!had)
-            tileModel.append({ name: name })
-    }
+    // Layout presets also act on the target canvas (sidebar + remote).
+    function applyGrid(cols) { targetCanvasItem().applyGrid(cols) }
+    function applyOnePlusSide() { targetCanvasItem().applyOnePlusSide() }
+    function applyTwoPlusEight() { targetCanvasItem().applyTwoPlusEight() }
 
     // ------------------------------------------------------- profiles
     // A profile bundles sources + tile layout + per-tile views. Applying
@@ -271,97 +286,66 @@ ApplicationWindow {
     property var profiles: []
     property string currentProfile: ""
 
-    // Geometry is stored normalized (0..1 of canvas size) so a profile
-    // saved windowed applies cleanly in fullscreen and vice versa.
-    function captureTiles() {
+    // Tile geometry inside each canvas is stored normalized (0..1), see
+    // TileCanvas.captureTiles(). Profiles keep the main canvas in
+    // `tiles` (same shape as before, so old profiles still load) and the
+    // extra output canvases in `outputs`. Session saves also record each
+    // output window's windowed geometry.
+    function captureOutputs(withGeom) {
         const arr = []
-        for (let i = 0; i < tileRepeater.count; i++) {
-            const it = tileRepeater.itemAt(i)
-            if (!it)
+        for (let i = 0; i < outputModel.count; i++) {
+            const w = outputInst.objectAt(i)
+            if (!w)
                 continue
-            arr.push({
-                source: it.sourceName,
-                x: it.x / canvas.width,
-                y: it.y / canvas.height,
-                w: it.width / canvas.width,
-                h: it.height / canvas.height,
-                z: it.z,
-                view: it.viewState(),
-                showName: it.showName,
-                showMeter: it.showMeter,
-                lowBw: it.lowBw,
-                lowLat: it.lowLat,
-                customName: it.customName
-            })
+            const m = outputModel.get(i)
+            const o = {
+                name: m.name,
+                screenIndex: m.screenIndex,
+                fullscreen: m.fullscreen === true,
+                tiles: w.canvas.captureTiles()
+            }
+            if (withGeom) {
+                const r = w.windowedRect()
+                o.wx = r.x
+                o.wy = r.y
+                o.ww = r.width
+                o.wh = r.height
+            }
+            arr.push(o)
         }
         return arr
     }
 
-    function applyTiles(tiles) {
-        if (!tiles)
-            return
-        // Group target entries by source — duplicates are allowed, so the
-        // diff works on instance COUNTS per source. Tiles kept across the
-        // switch never reconnect; only surplus/missing instances change.
-        const target = {}
-        for (const t of tiles) {
-            if (!target[t.source])
-                target[t.source] = []
-            target[t.source].push(t)
-        }
-        const have = {}
-        for (let i = 0; i < tileModel.count; i++) {
-            const nm = tileModel.get(i).name
-            have[nm] = (have[nm] || 0) + 1
-        }
-        for (let i = tileModel.count - 1; i >= 0; i--) {
-            const nm = tileModel.get(i).name
-            const need = target[nm] ? target[nm].length : 0
-            if (have[nm] > need) {
-                tileModel.remove(i)
-                have[nm]--
-            }
-        }
-        for (const s in target) {
-            for (let k = have[s] || 0; k < target[s].length; k++)
-                tileModel.append({ name: s })
-        }
-        // Pair surviving/new tiles with target entries per source, in
-        // order, and apply geometry, view and options.
-        const buckets = {}
-        for (let i = 0; i < tileRepeater.count; i++) {
-            const it = tileRepeater.itemAt(i)
-            if (!it)
+    function applyOutputs(outputs) {
+        if (!outputs)
+            outputs = []
+        // Match window count to the target: surplus windows close (their
+        // receivers shut down), missing ones open.
+        while (outputModel.count > outputs.length)
+            outputModel.remove(outputModel.count - 1)
+        while (outputModel.count < outputs.length)
+            outputModel.append({ name: "Output " + (outputModel.count + 2),
+                                 screenIndex: 0, fullscreen: false })
+        for (let i = 0; i < outputs.length; i++) {
+            const o = outputs[i]
+            outputModel.set(i, {
+                name: o.name || ("Output " + (i + 2)),
+                screenIndex: o.screenIndex || 0,
+                fullscreen: o.fullscreen === true
+            })
+            const w = outputInst.objectAt(i)
+            if (!w)
                 continue
-            if (!buckets[it.sourceName])
-                buckets[it.sourceName] = []
-            buckets[it.sourceName].push(it)
-        }
-        let maxZ = 0
-        for (const s in target) {
-            const items = buckets[s] || []
-            for (let k = 0; k < target[s].length; k++) {
-                const t = target[s][k]
-                const it = items[k]
-                if (!it)
-                    continue
-                it.x = t.x * canvas.width
-                it.y = t.y * canvas.height
-                it.width = Math.max(it.minW, t.w * canvas.width)
-                it.height = Math.max(it.minH, t.h * canvas.height)
-                it.z = t.z || 0
-                maxZ = Math.max(maxZ, it.z)
-                if (t.view)
-                    it.setViewState(t.view)
-                it.showName = t.showName !== false
-                it.showMeter = t.showMeter === true
-                it.lowBw = t.lowBw === true
-                it.lowLat = t.lowLat === true
-                it.customName = t.customName || ""
+            if (!o.fullscreen && o.ww !== undefined && o.ww > 200) {
+                w.x = o.wx
+                w.y = o.wy
+                w.width = o.ww
+                w.height = o.wh
             }
+            w.canvas.applyTiles(o.tiles || [])
         }
-        window.topZ = maxZ + 1
-        canvas.selectedTile = null
+        if (targetCanvas > outputModel.count)
+            targetCanvas = 0
     }
 
     function saveProfilesFile() {
@@ -373,7 +357,8 @@ ApplicationWindow {
         name = name.trim()
         if (name === "")
             return
-        const p = { name: name, tiles: captureTiles() }
+        const p = { name: name, tiles: canvas.captureTiles(),
+                    outputs: captureOutputs(false) }
         const idx = profiles.findIndex(x => x.name === name)
         if (idx >= 0)
             profiles[idx] = p
@@ -393,10 +378,14 @@ ApplicationWindow {
         const idx = profiles.findIndex(x => x.name === currentProfile)
         if (idx < 0)
             return
-        const tiles = captureTiles()
-        if (JSON.stringify(profiles[idx].tiles) === JSON.stringify(tiles))
+        const tiles = canvas.captureTiles()
+        const outputs = captureOutputs(false)
+        if (JSON.stringify(profiles[idx].tiles) === JSON.stringify(tiles)
+                && JSON.stringify(profiles[idx].outputs || [])
+                   === JSON.stringify(outputs))
             return
         profiles[idx].tiles = tiles
+        profiles[idx].outputs = outputs
         profiles = profiles.slice()
         saveProfilesFile()
     }
@@ -406,7 +395,8 @@ ApplicationWindow {
         if (!p)
             return
         syncActiveProfile() // don't lose changes made since the last tick
-        applyTiles(p.tiles)
+        canvas.applyTiles(p.tiles)
+        applyOutputs(p.outputs) // older profiles have none: closes extras
         currentProfile = name
     }
 
@@ -421,7 +411,7 @@ ApplicationWindow {
     function saveSession() {
         syncActiveProfile()
         storage.save("session.json", JSON.stringify({
-            version: 1,
+            version: 2,
             snapOn: snapOn,
             wheelRotateOn: wheelRotateOn,
             tileGap: tileGap,
@@ -431,16 +421,10 @@ ApplicationWindow {
             remoteEnabled: remoteEnabled,
             remotePort: remotePort,
             currentProfile: currentProfile,
-            tiles: captureTiles()
+            targetCanvas: targetCanvas,
+            tiles: canvas.captureTiles(),
+            outputs: captureOutputs(true)
         }))
-    }
-
-    function closeTilePopups() {
-        for (let i = 0; i < tileRepeater.count; i++) {
-            const t = tileRepeater.itemAt(i)
-            if (t)
-                t.closePopups()
-        }
     }
 
     Component.onCompleted: {
@@ -465,14 +449,24 @@ ApplicationWindow {
                 if (s.remotePort !== undefined)
                     remotePort = s.remotePort
                 currentProfile = s.currentProfile || ""
-                applyTiles(s.tiles || [])
+                canvas.applyTiles(s.tiles || [])
+                applyOutputs(s.outputs)
+                if (s.targetCanvas !== undefined)
+                    targetCanvas = Math.max(0, Math.min(s.targetCanvas,
+                                                        outputModel.count))
             }
         } catch (e) {
             console.warn("Could not read session.json:", e)
         }
     }
 
-    onClosing: saveSession()
+    // With extra output windows open, closing the main window would just
+    // leave them orphaned — save everything, then quit the whole app.
+    onClosing: {
+        saveSession()
+        quitting = true
+        Qt.quit()
+    }
 
     // Autosave so a crash or power loss never costs the arrangement.
     Timer {
@@ -482,91 +476,6 @@ ApplicationWindow {
         onTriggered: window.saveSession()
     }
 
-
-    // Preset layouts arrange the tiles that are already on the canvas.
-    function applyGrid(cols) {
-        const n = tileRepeater.count
-        if (n === 0)
-            return
-        const rows = Math.ceil(n / cols)
-        const gut = tileGap
-        const cw = (canvas.width - gut * (cols + 1)) / cols
-        const ch = (canvas.height - gut * (rows + 1)) / rows
-        for (let i = 0; i < n; i++) {
-            const it = tileRepeater.itemAt(i)
-            const c = i % cols
-            const r = Math.floor(i / cols)
-            it.x = gut + c * (cw + gut)
-            it.y = gut + r * (ch + gut)
-            it.width = cw
-            it.height = ch
-        }
-    }
-
-    function applyOnePlusSide() {
-        const n = tileRepeater.count
-        if (n === 0)
-            return
-        if (n === 1) {
-            applyGrid(1)
-            return
-        }
-        const gut = tileGap
-        const bigW = (canvas.width - gut * 3) * 2 / 3
-        const big = tileRepeater.itemAt(0)
-        big.x = gut
-        big.y = gut
-        big.width = bigW
-        big.height = canvas.height - 2 * gut
-        const colX = gut * 2 + bigW
-        const colW = canvas.width - colX - gut
-        const side = n - 1
-        const ch = (canvas.height - gut * (side + 1)) / side
-        for (let i = 1; i < n; i++) {
-            const it = tileRepeater.itemAt(i)
-            it.x = colX
-            it.y = gut + (i - 1) * (ch + gut)
-            it.width = colW
-            it.height = ch
-        }
-    }
-
-    // Classic production multiview: two large monitors on top (preview /
-    // program), the rest in rows of four below.
-    function applyTwoPlusEight() {
-        const n = tileRepeater.count
-        if (n === 0)
-            return
-        const gut = tileGap
-        const topN = Math.min(2, n)
-        const rest = n - topN
-        const topH = rest > 0 ? (canvas.height - 2 * gut) * 0.55
-                              : canvas.height - 2 * gut
-        const tw = (canvas.width - gut * (topN + 1)) / topN
-        for (let i = 0; i < topN; i++) {
-            const it = tileRepeater.itemAt(i)
-            it.x = gut + i * (tw + gut)
-            it.y = gut
-            it.width = tw
-            it.height = topH
-        }
-        if (rest > 0) {
-            const cols = 4
-            const rows = Math.ceil(rest / cols)
-            const bottomY = gut + topH + gut
-            const bh = (canvas.height - bottomY - gut * rows) / rows
-            const bw = (canvas.width - gut * (cols + 1)) / cols
-            for (let i = 0; i < rest; i++) {
-                const it = tileRepeater.itemAt(topN + i)
-                const c = i % cols
-                const r = Math.floor(i / cols)
-                it.x = gut + c * (bw + gut)
-                it.y = bottomY + r * (bh + gut)
-                it.width = bw
-                it.height = bh
-            }
-        }
-    }
 
     // Small button used by the sidebar, toolbar and settings panel.
     component ToolBtn: Rectangle {
@@ -606,7 +515,7 @@ ApplicationWindow {
             Behavior on width { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
 
             HoverHandler {
-                onPointChanged: window.mouseActivity(point.position)
+                onPointChanged: canvas.mouseActivity(point.position)
             }
 
             Column {
@@ -668,31 +577,38 @@ ApplicationWindow {
                     font.pixelSize: 10
                 }
                 Text {
-                    text: finder.sources.length === 0
-                          ? "Searching the network…"
-                          : finder.sources.length + (window.allowDuplicates
-                              ? " found — click to add (again for another copy)"
-                              : " found — click to add/remove")
-                    color: "#8a8a90"
+                    text: {
+                        window.canvasRevision // re-evaluate on renames too
+                        if (finder.sources.length === 0)
+                            return "Searching the network…"
+                        let t = finder.sources.length + (window.allowDuplicates
+                            ? " found — click to add (again for another copy)"
+                            : " found — click to add/remove")
+                        if (window.targetCanvas > 0)
+                            t += " → " + window.targetName()
+                        return t
+                    }
+                    color: window.targetCanvas > 0 ? "#3d7eff" : "#8a8a90"
                     font.pixelSize: 11
                 }
 
                 ListView {
                     id: sourceList
                     width: parent.width
-                    height: parent.height - y - layoutsSec.height - profilesSec.height - footer.height - 48
+                    height: parent.height - y - layoutsSec.height - outputsSec.height - profilesSec.height - footer.height - 56
                     clip: true
                     spacing: 4
                     model: finder.sources
 
                     delegate: Rectangle {
                         required property string modelData
-                        // Depends on tileModel.count so it re-evaluates on
-                        // every add/remove. Several tiles may show the
-                        // same source (different crops of one shot).
+                        // Re-counts whenever any canvas's tiles change or
+                        // the target canvas switches. Several tiles may
+                        // show the same source (different crops of a shot).
                         property int instances: {
-                            tileModel.count
-                            return window.sourceCount(modelData)
+                            window.canvasRevision
+                            window.targetCanvas
+                            return window.activeSourceCount(modelData)
                         }
                         width: sourceList.width
                         height: 34
@@ -760,6 +676,48 @@ ApplicationWindow {
                             height: 24
                             active: window.snapOn
                             onActivated: window.snapOn = !window.snapOn
+                        }
+                    }
+                }
+
+                // ------------------------------- canvases (multi-monitor)
+                Column {
+                    id: outputsSec
+                    width: parent.width
+                    spacing: 4
+
+                    Text {
+                        text: "CANVASES"
+                        color: "#5a5a60"
+                        font.pixelSize: 10
+                    }
+
+                    Flow {
+                        width: parent.width
+                        spacing: 4
+
+                        ToolBtn {
+                            label: "Main"
+                            height: 24
+                            active: window.targetCanvas === 0
+                            onActivated: window.targetCanvas = 0
+                        }
+                        Repeater {
+                            model: outputModel
+
+                            ToolBtn {
+                                required property int index
+                                required property string name
+                                label: name
+                                height: 24
+                                active: window.targetCanvas === index + 1
+                                onActivated: window.targetCanvas = index + 1
+                            }
+                        }
+                        ToolBtn {
+                            label: "+ Add"
+                            height: 24
+                            onActivated: window.addOutput()
                         }
                     }
                 }
@@ -901,235 +859,53 @@ ApplicationWindow {
         }
 
         // -------------------------------------------------- tile canvas
-        Rectangle {
+        TileCanvas {
             id: canvas
             width: parent.width - sidebar.width
             height: parent.height
-            color: "#0e0e10"
-            clip: true
+            snapEnabled: window.snapOn
+            wheelRotate: window.wheelRotateOn
+            globalShowName: window.showTileNames
+            tileGap: window.tileGap
+            availableSources: finder.sources
+            moveWindowOnDrag: window.displayMode === 2
+            focusTarget: keyCatcher
+            emptyHint: finder.sources.length === 0
+                       ? "Waiting for NDI® sources to appear on the network…"
+                       : "Click sources on the left to add them to the canvas"
+            onTilesMutated: window.canvasRevision++
+        }
+    }
 
-            property var selectedTile: null
+    // ------------------------------------------- extra output canvases
+    // Multi-monitor mode: each entry is one more window with its own
+    // canvas, typically sent fullscreen to another monitor. The model is
+    // the single source of truth for name/monitor/fullscreen; windows
+    // only emit signals and the writes flow back in via bindings.
+    ListModel { id: outputModel }
 
-            // The canvas changes size when the window mode changes or the
-            // sidebar collapses. Scale the tile layout proportionally so
-            // the arrangement survives every switch — otherwise tiles kept
-            // absolute positions and could end up clipped out of view.
-            property size prevSize: Qt.size(0, 0)
-            onWidthChanged: rescaleTiles()
-            onHeightChanged: rescaleTiles()
+    Instantiator {
+        id: outputInst
+        model: outputModel
 
-            function rescaleTiles() {
-                const pw = prevSize.width
-                const ph = prevSize.height
-                if (pw > 0 && ph > 0 && width > 0 && height > 0
-                        && (pw !== width || ph !== height)) {
-                    const sx = width / pw
-                    const sy = height / ph
-                    for (let i = 0; i < tileRepeater.count; i++) {
-                        const it = tileRepeater.itemAt(i)
-                        if (!it)
-                            continue
-                        it.x *= sx
-                        it.y *= sy
-                        it.width = Math.max(it.minW, it.width * sx)
-                        it.height = Math.max(it.minH, it.height * sy)
-                    }
-                }
-                prevSize = Qt.size(width, height)
-            }
-
-            // Track which tile is topmost under the cursor: only that tile
-            // shows its hover UI, so with overlapping tiles the buttons you
-            // see are always the buttons you hit.
-            property var hoverTile: null
-
-            function updateHoverTile(pos) {
-                // childAt ignores z-order, so find the topmost tile
-                // manually: highest z wins, later creation breaks ties
-                // (matching the scene graph's paint order).
-                let best = null
-                for (let i = 0; i < tileRepeater.count; i++) {
-                    const it = tileRepeater.itemAt(i)
-                    if (!it)
-                        continue
-                    if (pos.x >= it.x && pos.x <= it.x + it.width
-                            && pos.y >= it.y && pos.y <= it.y + it.height) {
-                        if (!best || it.z >= best.z)
-                            best = it
-                    }
-                }
-                hoverTile = best
-            }
-
-            HoverHandler {
-                id: canvasHover
-                onPointChanged: {
-                    window.mouseActivity(point.position)
-                    canvas.updateHoverTile(point.position)
-                }
-                onHoveredChanged: {
-                    if (!hovered)
-                        canvas.hoverTile = null
-                }
-            }
-
-            // Click empty canvas to deselect and close any open tile menus.
-            TapHandler {
-                gesturePolicy: TapHandler.ReleaseWithinBounds
-                onTapped: {
-                    canvas.selectedTile = null
-                    window.closeTilePopups()
-                    // Reclaim keyboard focus (e.g. after typing in a size box)
-                    // so Esc keeps working.
-                    keyCatcher.forceActiveFocus()
-                }
-            }
-
-            // In windowless mode, dragging empty canvas moves the window.
-            DragHandler {
-                enabled: window.displayMode === 2
-                target: null
-                onActiveChanged: if (active) window.startSystemMove()
-            }
-
-            Text {
-                anchors.centerIn: parent
-                visible: tileModel.count === 0
-                text: finder.sources.length === 0
-                      ? "Waiting for NDI® sources to appear on the network…"
-                      : "Click sources on the left to add them to the canvas"
-                color: "#5a5a60"
-                font.pixelSize: 16
-            }
-
-            // Snap grid: appears only while a tile is being dragged or
-            // resized with snapping engaged (Max's spec).
-            property int snapDragCount: 0
-
-            Canvas {
-                id: snapGrid
-                anchors.fill: parent
-                visible: canvas.snapDragCount > 0
-                opacity: 0.55
-                onVisibleChanged: if (visible) requestPaint()
-                onWidthChanged: requestPaint()
-                onHeightChanged: requestPaint()
-
-                onPaint: {
-                    const ctx = getContext("2d")
-                    ctx.clearRect(0, 0, width, height)
-                    ctx.strokeStyle = "#2a2a30"
-                    ctx.lineWidth = 1
-                    ctx.beginPath()
-                    for (let x = 16.5; x < width; x += 16) {
-                        ctx.moveTo(x, 0)
-                        ctx.lineTo(x, height)
-                    }
-                    for (let y = 16.5; y < height; y += 16) {
-                        ctx.moveTo(0, y)
-                        ctx.lineTo(width, y)
-                    }
-                    ctx.stroke()
-                }
-            }
-
-            // Tiles live in their own layer so their z-order competition
-            // stays among themselves — toolbar and status strip are
-            // siblings drawn above this layer and can never be covered.
-            Item {
-                id: tileLayer
-                anchors.fill: parent
-
-                Repeater {
-                    id: tileRepeater
-                    model: tileModel
-
-                    delegate: Tile {
-                        required property int index
-                        required property string name
-                        sourceName: name
-                        snapEnabled: window.snapOn
-                        wheelRotate: window.wheelRotateOn
-                        globalShowName: window.showTileNames
-                        availableSources: finder.sources
-                        gridSize: 16
-                        selected: canvas.selectedTile === this
-                        hoverTop: canvas.hoverTile === this
-                        onSnapDragActiveChanged:
-                            canvas.snapDragCount += snapDragActive ? 1 : -1
-                        Component.onCompleted: {
-                            x = 24 + (index % 5) * 40
-                            y = 24 + (index % 5) * 40
-                            z = ++window.topZ
-                            canvas.selectedTile = this
-                        }
-                        onSelectRequested: {
-                            canvas.selectedTile = this
-                            z = ++window.topZ
-                        }
-                        onCloseRequested: {
-                            if (canvas.selectedTile === this)
-                                canvas.selectedTile = null
-                            tileModel.remove(index)
-                        }
-                        // Swap the tile to another source in place: the
-                        // model rename flows into sourceName, the receiver
-                        // reconnects and the view resets to fit.
-                        onSwapRequested: newName =>
-                            tileModel.setProperty(index, "name", newName)
-                        Component.onDestruction: {
-                            if (snapDragActive)
-                                canvas.snapDragCount--
-                            if (canvas.hoverTile === this)
-                                canvas.hoverTile = null
-                        }
-                    }
-                }
-            }
-
-            // Auto-hiding status bar: tiles get the whole canvas; move the
-            // mouse to the bottom edge to peek at selected-tile info.
-            Item {
-                anchors.bottom: parent.bottom
-                anchors.left: parent.left
-                anchors.right: parent.right
-                height: 44
-                HoverHandler { id: bottomZone }
-            }
-
-            Rectangle {
-                anchors.bottom: parent.bottom
-                anchors.left: parent.left
-                anchors.right: parent.right
-                height: 28
-                color: "#141417ee"
-                visible: opacity > 0 && tileModel.count > 0
-                opacity: bottomZone.hovered ? 1 : 0
-                Behavior on opacity { NumberAnimation { duration: 150 } }
-
-                Text {
-                    anchors.verticalCenter: parent.verticalCenter
-                    anchors.left: parent.left
-                    anchors.leftMargin: 12
-                    anchors.right: stripStatus.left
-                    anchors.rightMargin: 12
-                    text: canvas.selectedTile
-                          ? canvas.selectedTile.displayName
-                          : tileModel.count + " tile" + (tileModel.count === 1 ? "" : "s")
-                    color: "#d8d8dc"
-                    font.pixelSize: 11
-                    elide: Text.ElideRight
-                }
-                Text {
-                    id: stripStatus
-                    anchors.verticalCenter: parent.verticalCenter
-                    anchors.right: parent.right
-                    anchors.rightMargin: 12
-                    text: canvas.selectedTile ? canvas.selectedTile.status : ""
-                    color: "#8a8a90"
-                    font.pixelSize: 11
-                }
-            }
+        delegate: OutputWindow {
+            outputName: model.name
+            screenIndex: model.screenIndex
+            fullscreenOn: model.fullscreen
+            isTarget: window.targetCanvas === index + 1
+            snapOn: window.snapOn
+            wheelRotateOn: window.wheelRotateOn
+            showTileNames: window.showTileNames
+            tileGap: window.tileGap
+            availableSources: finder.sources
+            appQuitting: window.quitting
+            onCloseRequested: window.removeOutput(index)
+            onFullscreenToggled: on =>
+                outputModel.setProperty(index, "fullscreen", on)
+            onScreenPicked: si =>
+                outputModel.setProperty(index, "screenIndex", si)
+            onTargetRequested: window.targetCanvas = index + 1
+            onTilesMutated: window.canvasRevision++
         }
     }
 
@@ -1503,7 +1279,7 @@ ApplicationWindow {
                     font.weight: Font.DemiBold
                 }
                 Text {
-                    text: "Version 0.2.0 — Cinertia Systems"
+                    text: "Version 0.3.0 — Cinertia Systems"
                     color: "#8a8a90"
                     font.pixelSize: 12
                 }
