@@ -19,8 +19,8 @@ Easy to rename later.
    label stay put, the view resets to fit.
 2. **Multi-monitor canvases** — the sidebar's new CANVASES section
    (+ Add) opens extra output windows, each a full canvas of its own
-   that can go fullscreen on any monitor (hover its top edge for
-   monitor picker / fullscreen / close). The Canvases buttons pick
+   that can go fullscreen on any monitor (hover its top edge for a ⋯
+   dropdown: monitor picker / fullscreen / close). The Canvases buttons pick
    which canvas sidebar clicks and layout presets aim at. Profiles and
    the session save every canvas, so a saved "look" restores across
    all displays. Technical shape: the canvas was extracted from

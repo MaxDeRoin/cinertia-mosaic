@@ -163,12 +163,15 @@ program/preview wall on the stage-left TV.
 - **Aim your clicks:** the Canvases buttons choose which canvas sidebar
   source clicks and Layout presets act on. The blue source dots, the
   hint line ("→ Output 2") and the highlighted button always show where
-  new tiles will land. You can also hover an output window's top edge
-  and press **“Send sources here”**.
-- **Output window controls** (hover the top edge): the canvas name, a
-  **monitor picker** (1, 2, 3…), **Fullscreen/Windowed**, and ✕ to
-  close that canvas (its tiles and connections are dropped). Inside the
-  window, **F11** toggles fullscreen and **Esc** leaves it.
+  new tiles will land. You can also use **Send sources here** in an
+  output window's ⋯ menu.
+- **Output window controls:** hover the top edge and a small **⋯**
+  button appears in the corner — click it for the menu: **Send sources
+  here**, a **monitor picker** (1, 2, 3…), **Fullscreen**, and **Close
+  this canvas** (its tiles and connections are dropped). The menu
+  floats above the tiles, so nothing overlays your pictures until you
+  open it. Inside the window, **F11** toggles fullscreen and **Esc**
+  closes the menu / leaves fullscreen.
 - Tiles on an output canvas work exactly like on the main one: drag,
   resize, zoom, crop, swap sources, per-tile options, snap, layouts.
 - Everything is remembered — profiles and the session store each
