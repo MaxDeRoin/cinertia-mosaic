@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Mosaic User Guide</title>
+<style>
+    * { box-sizing: border-box; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+    @page { size: Letter; margin: 0; }
+    html, body {
+        margin: 0; padding: 0;
+        background: #0e0e10;
+        color: #d8d8dc;
+        font-family: "Segoe UI", -apple-system, sans-serif;
+        font-size: 10.5pt;
+        line-height: 1.5;
+    }
+    .page { padding: 12mm 15mm; }
+
+    /* ------------------------------------------------------- header */
+    .cover {
+        display: flex; align-items: center; gap: 14px;
+        padding: 10mm 0 6mm 0;
+        border-bottom: 2px solid #3d7eff;
+        margin-bottom: 8mm;
+    }
+    .cover img { width: 64px; height: 64px; }
+    .cover .title { font-size: 30pt; font-weight: 600; color: #e8e8ea; line-height: 1.1; }
+    .cover .subtitle { font-size: 12pt; color: #8a8a90; margin-top: 2px; }
+    .badge {
+        display: inline-block; margin-left: 10px; padding: 2px 10px;
+        background: #22303e; border: 1px solid #3d7eff; border-radius: 10px;
+        color: #3d7eff; font-size: 9pt; font-weight: 600; vertical-align: middle;
+    }
+
+    h2 {
+        color: #e8e8ea; font-size: 15pt; font-weight: 600;
+        margin: 6mm 0 2.5mm 0; padding-bottom: 4px;
+        border-bottom: 1px solid #2a2a2e;
+        break-after: avoid;
+    }
+    h2 .accent { color: #3d7eff; }
+    h3 {
+        color: #3d7eff; font-size: 11pt; font-weight: 600;
+        margin: 4mm 0 1.5mm 0; break-after: avoid;
+        text-transform: uppercase; letter-spacing: 0.06em;
+    }
+    p { margin: 0 0 2.5mm 0; }
+    ul, ol { margin: 0 0 3mm 0; padding-left: 6mm; }
+    li { margin-bottom: 1.2mm; }
+    strong { color: #e8e8ea; }
+    a { color: #3d7eff; text-decoration: none; }
+
+    .card {
+        background: #141417; border: 1px solid #2a2a2e; border-radius: 6px;
+        padding: 4mm 5mm; margin: 0 0 4mm 0;
+        break-inside: avoid;
+    }
+    .tip {
+        background: #16202e; border: 1px solid #2b4a77; border-left: 3px solid #3d7eff;
+        border-radius: 4px; padding: 3mm 4mm; margin: 3mm 0;
+        break-inside: avoid;
+    }
+    .tip strong { color: #3d7eff; }
+
+    kbd {
+        display: inline-block; padding: 0 5px; margin: 0 1px;
+        background: #1a1a1e; border: 1px solid #3a3a40; border-bottom-width: 2px;
+        border-radius: 4px; color: #e8e8ea;
+        font-family: "Segoe UI", sans-serif; font-size: 9pt;
+    }
+    code {
+        background: #1a1a1e; border: 1px solid #2a2a2e; border-radius: 3px;
+        padding: 0 4px; color: #9ec1ff; font-family: Consolas, monospace; font-size: 9pt;
+    }
+
+    table {
+        width: 100%; border-collapse: collapse; margin: 2mm 0 4mm 0;
+        break-inside: avoid; font-size: 9.5pt;
+    }
+    th {
+        text-align: left; color: #3d7eff; font-weight: 600;
+        padding: 2mm 3mm; border-bottom: 1px solid #3d7eff;
+        text-transform: uppercase; letter-spacing: 0.05em; font-size: 8.5pt;
+    }
+    td { padding: 1.5mm 3mm; border-bottom: 1px solid #232328; vertical-align: top; }
+    tr:nth-child(even) td { background: #131316; }
+
+    .btnrow { color: #8a8a90; }
+    .btnrow b { color: #e8e8ea; font-weight: 600; }
+
+    .footer {
+        margin-top: 6mm; padding-top: 3mm; border-top: 1px solid #2a2a2e;
+        color: #5a5a60; font-size: 8.5pt;
+        break-inside: avoid;
+    }
+    .pagebreak { break-before: page; }
+</style>
+</head>
+<body>
+<div class="page">
+
+    <div class="cover">
+        <img src="../../resources/mosaic-logo.png" alt="Mosaic logo">
+        <div>
+            <div class="title">Mosaic <span class="badge">v0.2.0</span></div>
+            <div class="subtitle">Professional NDI® Multiviewer &nbsp;·&nbsp; User Guide &nbsp;·&nbsp; Cinertia Systems</div>
+        </div>
+    </div>
+
+    <h2>Installation</h2>
+    <div class="card">
+        <ol>
+            <li>Run <code>Mosaic-Setup-0.2.0.exe</code> on 64-bit Windows 10 or 11 and follow the wizard. Everything Mosaic needs is included — there is nothing else to install.</li>
+            <li>Launch <strong>Mosaic</strong> from the Start Menu (or the optional desktop icon).</li>
+            <li>The first time Mosaic runs, <strong>Windows Firewall</strong> will ask for network access — click <strong>Allow</strong>. NDI® discovery and video need it.</li>
+        </ol>
+    </div>
+
+    <h2>Quick start</h2>
+    <div class="card">
+        <ol>
+            <li><strong>Add sources</strong> — every NDI source on your network appears in the left sidebar automatically. Click one to put it on the canvas; click again to remove it.</li>
+            <li><strong>Arrange</strong> — click a layout under <strong>LAYOUTS</strong> (2×2, 3×3, 4×4, 1+side, 2+8), or drag tiles wherever you want them.</li>
+            <li><strong>Look closer</strong> — scroll to zoom into any tile, drag to pan while zoomed, double-click to reset.</li>
+            <li><strong>Save a profile</strong> — type a name under <strong>PROFILES</strong> and press Save. Click profile names to switch setups instantly.</li>
+            <li><strong>Go big</strong> — press <kbd>F11</kbd> for fullscreen. <kbd>Esc</kbd> brings you back.</li>
+        </ol>
+    </div>
+
+    <h2>The main window</h2>
+    <p><strong>Sidebar (left):</strong> NDI® sources, layout buttons, profiles, and the settings gear ⚙. Collapse it with <b>«</b>; it hides itself in fullscreen and windowless modes — move the mouse to the <strong>left screen edge</strong> and click <b>»</b> to bring it back.</p>
+    <p><strong>Canvas:</strong> your tiles. Tiles use every pixel — there are no permanent toolbars.</p>
+    <p><strong>Status bar (hidden):</strong> move the mouse to the <strong>bottom edge</strong> to peek at the selected tile's name, resolution and frame rate.</p>
+
+    <h2>Working with tiles</h2>
+    <p>Hover a tile to reveal its header:
+        <span class="btnrow"><b>⟲ ⟳</b> rotate 90° · <b>Crop</b> drag-select a region · <b>Fit</b> reset the view and shape the tile to the video · <b>Size</b> exact pixel dimensions · <b>⋯</b> options · <b>✕</b> close</span></p>
+    <table>
+        <tr><th>To do this</th><th>Do this</th></tr>
+        <tr><td>Select a tile</td><td>Click it — blue border, comes to the front. The border fades when idle; nudge the mouse to see it again</td></tr>
+        <tr><td>Move a tile</td><td>Drag it (anywhere on the picture at normal zoom, or always by its header)</td></tr>
+        <tr><td>Resize a tile</td><td>Drag any corner</td></tr>
+        <tr><td>Snap to grid</td><td>Hold <kbd>Ctrl</kbd> while moving/resizing, or turn on <strong>Snap</strong> in LAYOUTS. The grid shows while you drag</td></tr>
+        <tr><td>Zoom</td><td>Scroll (or pinch) over the tile — zooms toward the cursor, 10%–3200%</td></tr>
+        <tr><td>Pan while zoomed</td><td>Drag the picture</td></tr>
+        <tr><td>Rotate freely</td><td><kbd>Alt</kbd> + scroll (2° steps), or use ⟲ ⟳ for 90°</td></tr>
+        <tr><td>Crop</td><td>Header → <strong>Crop</strong>, drag a box over the region. Crops stack; <strong>Fit</strong> or Clear crop resets</td></tr>
+        <tr><td>Reset the view</td><td>Double-click (zoom/pan) or header → <strong>Fit</strong> (everything, plus reshapes the tile)</td></tr>
+    </table>
+
+    <h3>Tile options (the ⋯ menu)</h3>
+    <table>
+        <tr><th>Option</th><th>What it does</th></tr>
+        <tr><td>Tile name</td><td>Custom label (e.g. <em>CAM 1 — STAGE LEFT</em>) replacing the source name everywhere. Clear it to go back</td></tr>
+        <tr><td>Source name</td><td>Shows the broadcast-style label at the bottom of the tile</td></tr>
+        <tr><td>Audio meter</td><td>Stereo peak meters on the tile's right edge (green/yellow/red)</td></tr>
+        <tr><td>Low bandwidth</td><td>Receives the NDI proxy stream — ideal for small tiles, big CPU/network savings</td></tr>
+        <tr><td>Low latency</td><td>Shows frames the instant they arrive (~a frame less delay, slightly less smooth). For cueing cameras</td></tr>
+    </table>
+
+    <div class="tip"><strong>One camera, many crops:</strong> turn on <strong>Settings → Allow duplicate sources</strong> and each sidebar click adds another copy of the source — crop each tile to a different part of one wide shot. The badge (● 3) counts the copies; remove them with the tile ✕.</div>
+
+    <div class="pagebreak"></div>
+
+    <h2>Profiles</h2>
+    <p>A profile is a complete setup: which sources are up, the layout, and every tile's zoom, crop, name and options.</p>
+    <ul>
+        <li><strong>Save:</strong> type a name under PROFILES → <strong>Save</strong>.</li>
+        <li><strong>Switch:</strong> click a profile — or press <kbd>Ctrl</kbd>+<kbd>1</kbd>…<kbd>9</kbd>. Sources shared between profiles never reconnect, so switching is instant.</li>
+        <li><strong>Auto-save:</strong> the active (highlighted) profile absorbs every change you make. The Save box is only for creating new profiles.</li>
+        <li><strong>Delete:</strong> hover a profile, click its ✕.</li>
+    </ul>
+    <p>Mosaic also remembers your last session and restores it on launch — even after a crash or power loss.</p>
+
+    <h2>Display modes</h2>
+    <table>
+        <tr><th>Mode</th><th>Details</th></tr>
+        <tr><td>Windowed</td><td>Normal resizable window (exact size settable in Settings)</td></tr>
+        <tr><td>Fullscreen</td><td>Borderless fullscreen; pick the monitor in Settings. <kbd>F11</kbd> toggles, <kbd>Esc</kbd> exits</td></tr>
+        <tr><td>Windowless</td><td>Frameless canvas. Drag empty canvas to move it, grab any edge to resize, pair with Always on top</td></tr>
+    </table>
+    <p>Your tile arrangement scales proportionally with every mode change — the layout you built is the layout you keep.</p>
+
+    <h2>Settings <span class="accent">⚙</span></h2>
+    <table>
+        <tr><th>Setting</th><th>What it does</th></tr>
+        <tr><td>Display mode + monitor</td><td>Windowed / Fullscreen / Windowless, and which screen fullscreen uses</td></tr>
+        <tr><td>Window size</td><td>Set an exact window resolution</td></tr>
+        <tr><td>Always on top</td><td>Mosaic floats over other windows</td></tr>
+        <tr><td>Rotate with Alt+scroll</td><td>Enable/disable wheel rotation</td></tr>
+        <tr><td>Show tile names</td><td>Master switch for all tile labels</td></tr>
+        <tr><td>Allow duplicate sources</td><td>Off: clicks toggle a source on/off. On: each click adds another copy</td></tr>
+        <tr><td>Keep display awake</td><td>Stops Windows from blanking the screen — for unattended show-day use</td></tr>
+        <tr><td>TCP remote control + port</td><td>The Stream Deck / Companion interface (default port 9955)</td></tr>
+        <tr><td>Tile spacing</td><td>Gap used by layout buttons, 0–64 px. 0 = seamless video wall</td></tr>
+    </table>
+
+    <h2>Hotkeys</h2>
+    <table>
+        <tr><th>Key</th><th>Action</th></tr>
+        <tr><td><kbd>Ctrl</kbd>+<kbd>1</kbd>…<kbd>9</kbd></td><td>Switch to profile 1–9 (sidebar order)</td></tr>
+        <tr><td><kbd>F11</kbd></td><td>Toggle fullscreen</td></tr>
+        <tr><td><kbd>Esc</kbd></td><td>Cancel crop / close dialogs, then return to windowed</td></tr>
+        <tr><td><kbd>Ctrl</kbd> (held while dragging)</td><td>Snap tiles to the grid</td></tr>
+        <tr><td><kbd>Alt</kbd>+scroll</td><td>Rotate the video in a tile</td></tr>
+    </table>
+
+    <h2>Stream Deck &amp; Bitfocus Companion</h2>
+    <p>Turn on <strong>Settings → Enable TCP remote control</strong> (green dot = listening). If Companion runs on another machine, allow Mosaic through the firewall.</p>
+    <h3>Native module (recommended)</h3>
+    <p>The <strong>Cinertia Mosaic</strong> Companion module gives you profile dropdowns fed live from Mosaic, ready-made buttons for every profile and layout, a connection-status button (red when the link drops — press it to reconnect), and <strong>active-profile feedback</strong>: the button for the live profile stays lit no matter how it was switched. Sideload: Companion launcher → cog → set <em>Developer modules path</em> to the provided <code>companion-module</code> folder, then add the <em>Cinertia Mosaic</em> connection with Mosaic's IP and port.</p>
+    <h3>Generic TCP (any controller)</h3>
+    <p>Send plain text commands, one per line, to port 9955 — e.g. from Companion's <em>Generic TCP/UDP</em> module:</p>
+    <table>
+        <tr><th>Command</th><th>Action</th></tr>
+        <tr><td><code>PROFILE Show A</code></td><td>Switch to a profile by name</td></tr>
+        <tr><td><code>PROFILEINDEX 2</code></td><td>Switch to the 2nd profile in the list</td></tr>
+        <tr><td><code>LAYOUT 2x2</code></td><td>Apply a layout (2x2, 3x3, 4x4, 1+side, 2+8)</td></tr>
+        <tr><td><code>MODE fullscreen</code></td><td>windowed / fullscreen / windowless</td></tr>
+        <tr><td><code>PROFILES?</code> · <code>STATUS?</code> · <code>PING</code></td><td>Queries — Mosaic replies, and pushes EVENT lines on every state change</td></tr>
+    </table>
+
+    <h2>Good to know</h2>
+    <ul>
+        <li>Profiles and settings live in <code>%APPDATA%\Cinertia Systems\Mosaic\</code> — copy that folder to move your setups to another machine.</li>
+        <li>Each tile is its own NDI receiver. For big walls, use <strong>Low bandwidth</strong> on small tiles.</li>
+        <li>Learn more about NDI® at <a href="https://ndi.video/">ndi.video</a>.</li>
+    </ul>
+
+    <div class="footer">
+        <strong style="color:#8a8a90">Support:</strong> max@cinertia.systems &nbsp;·&nbsp; Cinertia.Systems<br>
+        Mosaic v0.2.0 — © 2026 Cinertia Systems. NDI® is a registered trademark of Vizrt NDI AB.
+    </div>
+
+</div>
+</body>
+</html>
