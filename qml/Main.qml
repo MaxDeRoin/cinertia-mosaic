@@ -1051,6 +1051,7 @@ ApplicationWindow {
                         snapEnabled: window.snapOn
                         wheelRotate: window.wheelRotateOn
                         globalShowName: window.showTileNames
+                        availableSources: finder.sources
                         gridSize: 16
                         selected: canvas.selectedTile === this
                         hoverTop: canvas.hoverTile === this
@@ -1071,6 +1072,11 @@ ApplicationWindow {
                                 canvas.selectedTile = null
                             tileModel.remove(index)
                         }
+                        // Swap the tile to another source in place: the
+                        // model rename flows into sourceName, the receiver
+                        // reconnects and the view resets to fit.
+                        onSwapRequested: newName =>
+                            tileModel.setProperty(index, "name", newName)
                         Component.onDestruction: {
                             if (snapDragActive)
                                 canvas.snapDragCount--

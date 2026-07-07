@@ -36,6 +36,9 @@ Item {
     property bool globalShowName: true
     // Custom label (e.g. "CAM 1 — STAGE LEFT"); empty = show source name.
     property string customName: ""
+    // All discovered sources — offered in the ⋯ menu so the tile can be
+    // switched to another source without deleting it.
+    property var availableSources: []
     readonly property string displayName: customName !== "" ? customName : sourceName
     // True while the user drags/resizes this tile with snapping engaged —
     // the canvas shows the snap grid while any tile has this set.
@@ -47,6 +50,9 @@ Item {
 
     signal closeRequested()
     signal selectRequested()
+    // User picked a different source in the ⋯ menu. The canvas swaps the
+    // model entry; the video reconnects and resets to fit automatically.
+    signal swapRequested(string newName)
 
     width: 480
     height: 270
@@ -367,7 +373,7 @@ Item {
             anchors.top: header.bottom
             anchors.right: parent.right
             anchors.margins: 4
-            width: 160
+            width: 190
             height: optsCol.height + 16
             radius: 3
             color: "#1a1a1e"
@@ -480,6 +486,51 @@ Item {
                     label: "Low latency"
                     checked: tile.lowLat
                     onToggled: tile.lowLat = !tile.lowLat
+                }
+
+                Text {
+                    text: "CHANGE SOURCE"
+                    color: "#5a5a60"
+                    font.pixelSize: 9
+                }
+                ListView {
+                    width: optsCol.width
+                    height: Math.min(contentHeight, 110)
+                    clip: true
+                    model: tile.availableSources
+
+                    delegate: Rectangle {
+                        required property string modelData
+                        readonly property bool isCurrent:
+                            modelData === tile.sourceName
+                        width: ListView.view.width
+                        height: 22
+                        radius: 2
+                        color: isCurrent ? "#22303e"
+                             : srcHover.hovered ? "#2a2a30" : "transparent"
+                        border.width: isCurrent ? 1 : 0
+                        border.color: "#3d7eff"
+
+                        Text {
+                            anchors.verticalCenter: parent.verticalCenter
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            anchors.margins: 6
+                            text: parent.modelData
+                            color: "#d8d8dc"
+                            font.pixelSize: 11
+                            elide: Text.ElideRight
+                        }
+                        HoverHandler { id: srcHover }
+                        TapHandler {
+                            gesturePolicy: TapHandler.ReleaseWithinBounds
+                            onTapped: {
+                                if (!parent.isCurrent)
+                                    tile.swapRequested(parent.modelData)
+                                tile.optsOpen = false
+                            }
+                        }
+                    }
                 }
             }
         }
