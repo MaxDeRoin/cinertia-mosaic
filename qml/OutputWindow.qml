@@ -34,6 +34,7 @@ Window {
     readonly property alias canvas: tc
 
     signal closeRequested()
+    signal renameRequested(string name)
     signal modeChangeRequested(int mode)
     signal screenPicked(int index)
     signal targetRequested()
@@ -169,9 +170,13 @@ Window {
     // while it is open.
     property bool menuOpen: false
     // Reclaim keyboard focus when the menu closes (e.g. after typing in
-    // a size box) so Esc and F11 keep working in this window.
+    // a size box) so Esc and F11 keep working in this window. Opening
+    // resyncs the name box — typing in it breaks its binding, so a
+    // fresh open must show the current name again.
     onMenuOpenChanged: {
-        if (!menuOpen)
+        if (menuOpen)
+            nameInput.text = outputName
+        else
             outKeys.forceActiveFocus()
     }
 
@@ -275,11 +280,39 @@ Window {
             anchors.margins: 10
             spacing: 6
 
+            // Editable canvas name (same live-edit style as tile rename):
+            // every keystroke renames — the window title, the sidebar's
+            // Canvases button and saved profiles all follow the model.
             Text {
-                text: out.outputName
-                color: "#e8e8ea"
-                font.pixelSize: 13
-                font.weight: Font.DemiBold
+                text: "NAME"
+                color: "#5a5a60"
+                font.pixelSize: 9
+            }
+            Rectangle {
+                width: menuCol.width
+                height: 24
+                radius: 2
+                color: "#101013"
+                border.width: 1
+                border.color: nameInput.activeFocus ? "#3d7eff" : "#2a2a2e"
+
+                TextInput {
+                    id: nameInput
+                    anchors.fill: parent
+                    anchors.margins: 4
+                    color: "#e8e8ea"
+                    font.pixelSize: 12
+                    selectByMouse: true
+                    clip: true
+                    text: out.outputName
+                    // Blank names are never committed — the model keeps
+                    // the last real name until something is typed.
+                    onTextEdited: {
+                        if (text.trim() !== "")
+                            out.renameRequested(text.trim())
+                    }
+                    onAccepted: out.menuOpen = false
+                }
             }
 
             OutBtn {

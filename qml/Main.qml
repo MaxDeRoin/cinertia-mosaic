@@ -904,6 +904,10 @@ ApplicationWindow {
             availableSources: finder.sources
             appQuitting: window.quitting
             onCloseRequested: window.removeOutput(index)
+            onRenameRequested: nm => {
+                outputModel.setProperty(index, "name", nm)
+                window.canvasRevision++ // sidebar hint shows the new name
+            }
             onModeChangeRequested: m =>
                 outputModel.setProperty(index, "mode", m)
             onScreenPicked: si =>

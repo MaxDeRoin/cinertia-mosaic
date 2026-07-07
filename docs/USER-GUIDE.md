@@ -168,7 +168,9 @@ program/preview wall on the stage-left TV.
 - **Output window controls:** hover the **bottom edge** and a small
   **⋯** button appears in the bottom-right corner — it lives at the
   bottom on purpose, so it can never cover a tile's header or menu
-  (those are at the top of each tile). Click it for the menu: **Send
+  (those are at the top of each tile). Click it for the menu: the
+  canvas **name** (type to rename it — e.g. "STAGE LEFT WALL"; the
+  window title and the sidebar's Canvases button follow), **Send
   sources here**, the **window type** (Windowed / Fullscreen /
   Windowless), an exact **size** (width × height, hidden while
   fullscreen — type the numbers and click **Set**), a **monitor

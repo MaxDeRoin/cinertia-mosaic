@@ -21,6 +21,7 @@ Easy to rename later.
    (+ Add) opens extra output windows, each a full canvas of its own.
    Hover the BOTTOM edge for a ⋯ dropdown (bottom on purpose — tile
    headers/menus are at the top, so the button can never block them):
+   rename the canvas (live-edit name box, same style as tile rename),
    window type (Windowed / Fullscreen / Windowless), exact canvas size
    (width × height + Set, like the main settings panel), monitor
    picker, send-sources-here, close. Windowless outputs are frameless — drag
