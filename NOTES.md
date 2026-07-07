@@ -18,14 +18,19 @@ Easy to rename later.
    and the tile reconnects to it; position, size, options and custom
    label stay put, the view resets to fit.
 2. **Multi-monitor canvases** — the sidebar's new CANVASES section
-   (+ Add) opens extra output windows, each a full canvas of its own
-   that can go fullscreen on any monitor (hover its top edge for a ⋯
-   dropdown: monitor picker / fullscreen / close). The Canvases buttons pick
-   which canvas sidebar clicks and layout presets aim at. Profiles and
-   the session save every canvas, so a saved "look" restores across
-   all displays. Technical shape: the canvas was extracted from
-   Main.qml into a reusable TileCanvas.qml; OutputWindow.qml wraps one
-   in a frameless-friendly window; Main.qml keeps a model of outputs
+   (+ Add) opens extra output windows, each a full canvas of its own.
+   Hover the BOTTOM edge for a ⋯ dropdown (bottom on purpose — tile
+   headers/menus are at the top, so the button can never block them):
+   window type (Windowed / Fullscreen / Windowless), monitor picker,
+   send-sources-here, close. Windowless outputs are frameless — drag
+   the canvas background to move, grab edges/corners to resize, Esc
+   returns to a normal window. The Canvases buttons pick which canvas
+   sidebar clicks and layout presets aim at. Profiles and the session
+   save every canvas (old saves that stored just a fullscreen yes/no
+   still load), so a saved "look" restores across all displays.
+   Technical shape: the canvas was extracted from Main.qml into a
+   reusable TileCanvas.qml; OutputWindow.qml wraps one in a
+   frameless-friendly window; Main.qml keeps a model of outputs
    and routes sidebar actions to the targeted canvas.
 
 **Milestone 6a — profiles & persistence (awaiting Max's test).**

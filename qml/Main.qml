@@ -132,7 +132,7 @@ ApplicationWindow {
         const si = Math.min(Qt.application.screens.length - 1,
                             outputModel.count + 1)
         outputModel.append({ name: "Output " + n,
-                             screenIndex: si, fullscreen: false })
+                             screenIndex: si, mode: 0 })
         targetCanvas = outputModel.count
     }
 
@@ -301,7 +301,7 @@ ApplicationWindow {
             const o = {
                 name: m.name,
                 screenIndex: m.screenIndex,
-                fullscreen: m.fullscreen === true,
+                mode: m.mode || 0, // 0 windowed, 1 fullscreen, 2 windowless
                 tiles: w.canvas.captureTiles()
             }
             if (withGeom) {
@@ -325,18 +325,22 @@ ApplicationWindow {
             outputModel.remove(outputModel.count - 1)
         while (outputModel.count < outputs.length)
             outputModel.append({ name: "Output " + (outputModel.count + 2),
-                                 screenIndex: 0, fullscreen: false })
+                                 screenIndex: 0, mode: 0 })
         for (let i = 0; i < outputs.length; i++) {
             const o = outputs[i]
+            // Saves from 0.3.0 stored `fullscreen: true/false` instead
+            // of the three-way `mode` — map old files onto the new field.
+            const mode = o.mode !== undefined ? o.mode
+                       : (o.fullscreen === true ? 1 : 0)
             outputModel.set(i, {
                 name: o.name || ("Output " + (i + 2)),
                 screenIndex: o.screenIndex || 0,
-                fullscreen: o.fullscreen === true
+                mode: mode
             })
             const w = outputInst.objectAt(i)
             if (!w)
                 continue
-            if (!o.fullscreen && o.ww !== undefined && o.ww > 200) {
+            if (mode !== 1 && o.ww !== undefined && o.ww > 200) {
                 w.x = o.wx
                 w.y = o.wy
                 w.width = o.ww
@@ -891,7 +895,7 @@ ApplicationWindow {
         delegate: OutputWindow {
             outputName: model.name
             screenIndex: model.screenIndex
-            fullscreenOn: model.fullscreen
+            windowMode: model.mode
             isTarget: window.targetCanvas === index + 1
             snapOn: window.snapOn
             wheelRotateOn: window.wheelRotateOn
@@ -900,8 +904,8 @@ ApplicationWindow {
             availableSources: finder.sources
             appQuitting: window.quitting
             onCloseRequested: window.removeOutput(index)
-            onFullscreenToggled: on =>
-                outputModel.setProperty(index, "fullscreen", on)
+            onModeChangeRequested: m =>
+                outputModel.setProperty(index, "mode", m)
             onScreenPicked: si =>
                 outputModel.setProperty(index, "screenIndex", si)
             onTargetRequested: window.targetCanvas = index + 1

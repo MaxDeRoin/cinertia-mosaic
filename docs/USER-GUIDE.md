@@ -144,8 +144,8 @@ Mosaic also autosaves the whole session every 5 seconds and restores it
 on launch — even after a crash or power loss.
 
 Profiles capture **every canvas** — the main one and any extra output
-canvases (below), including which monitor each output is on and whether
-it's fullscreen. Switching profiles switches the whole multi-monitor
+canvases (below), including which monitor each output is on and its
+window type. Switching profiles switches the whole multi-monitor
 look at once.
 
 ---
@@ -165,17 +165,26 @@ program/preview wall on the stage-left TV.
   hint line ("→ Output 2") and the highlighted button always show where
   new tiles will land. You can also use **Send sources here** in an
   output window's ⋯ menu.
-- **Output window controls:** hover the top edge and a small **⋯**
-  button appears in the corner — click it for the menu: **Send sources
-  here**, a **monitor picker** (1, 2, 3…), **Fullscreen**, and **Close
-  this canvas** (its tiles and connections are dropped). The menu
-  floats above the tiles, so nothing overlays your pictures until you
-  open it. Inside the window, **F11** toggles fullscreen and **Esc**
-  closes the menu / leaves fullscreen.
+- **Output window controls:** hover the **bottom edge** and a small
+  **⋯** button appears in the bottom-right corner — it lives at the
+  bottom on purpose, so it can never cover a tile's header or menu
+  (those are at the top of each tile). Click it for the menu: **Send
+  sources here**, the **window type** (Windowed / Fullscreen /
+  Windowless), a **monitor picker** (1, 2, 3…), and **Close this
+  canvas** (its tiles and connections are dropped). The menu opens
+  upward and floats above the tiles, so nothing overlays your pictures
+  until you open it.
+- **Window types per canvas:** every output canvas has the same three
+  modes as the main window — **Windowed** (normal window),
+  **Fullscreen** (borderless, on the picked monitor), and
+  **Windowless** (no title bar, pure canvas: drag empty canvas to move
+  it, grab any edge or corner to resize). Inside the window, **F11**
+  toggles fullscreen and **Esc** closes the menu / returns to a normal
+  window.
 - Tiles on an output canvas work exactly like on the main one: drag,
   resize, zoom, crop, swap sources, per-tile options, snap, layouts.
 - Everything is remembered — profiles and the session store each
-  canvas's tiles, monitor, fullscreen state and window position.
+  canvas's tiles, monitor, window type and window position.
   Closing the main window closes the whole app (and saves first).
 
 ---

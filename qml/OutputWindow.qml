@@ -1,11 +1,12 @@
 import QtQuick
 
 // One extra output canvas in its own window (multi-monitor mode). The
-// chrome bar appears only when the mouse is near the top edge, so a
-// fullscreen output looks like a clean multiviewer feed. All state that
-// must persist (name, monitor, fullscreen) lives in the main window's
-// output model — the buttons here only emit signals, and the model
-// writes flow back in through the properties.
+// only chrome is a small ⋯ button that appears when the mouse is near
+// the BOTTOM edge — tiles keep their menus at the top, so the two can
+// never collide. All state that must persist (name, monitor, window
+// mode) lives in the main window's output model — the buttons here only
+// emit signals, and the model writes flow back in through the
+// properties.
 Window {
     id: out
     width: 960
@@ -17,7 +18,8 @@ Window {
     title: outputName + " — Mosaic"
 
     property string outputName: "Output"
-    property bool fullscreenOn: false
+    // 0 = windowed, 1 = fullscreen, 2 = windowless (frameless)
+    property int windowMode: 0
     property int screenIndex: 0
     // True while sidebar source clicks land on this canvas.
     property bool isTarget: false
@@ -32,7 +34,7 @@ Window {
     readonly property alias canvas: tc
 
     signal closeRequested()
-    signal fullscreenToggled(bool on)
+    signal modeChangeRequested(int mode)
     signal screenPicked(int index)
     signal targetRequested()
     signal tilesMutated()
@@ -47,6 +49,8 @@ Window {
 
     // Fullscreen dance mirrors the main window: dip through windowed when
     // moving between monitors, restore the windowed geometry afterwards.
+    // (Changing window flags rebuilds the native window on Windows and
+    // can reset the size, so geometry is re-applied after every switch.)
     property rect savedGeom: Qt.rect(0, 0, 0, 0)
 
     // The windowed geometry worth saving in the session, even while the
@@ -56,38 +60,45 @@ Window {
             ? savedGeom : Qt.rect(x, y, width, height)
     }
 
-    onFullscreenOnChanged: Qt.callLater(applyMode)
+    onWindowModeChanged: Qt.callLater(applyMode)
     onScreenIndexChanged: {
-        if (fullscreenOn)
+        if (windowMode === 1)
             Qt.callLater(applyMode)
     }
     Component.onCompleted: {
-        if (fullscreenOn)
+        if (windowMode !== 0)
             Qt.callLater(applyMode)
     }
 
     function applyMode() {
         if (visibility !== Window.FullScreen && width > 200)
             savedGeom = Qt.rect(x, y, width, height)
-        if (fullscreenOn) {
+        if (windowMode === 1) {
+            // Moving between monitors while already fullscreen needs a
+            // dip through windowed state or Windows keeps the old monitor.
             if (visibility === Window.FullScreen)
                 visibility = Window.Windowed
+            flags = Qt.Window
             const screens = Qt.application.screens
             out.screen = screens[Math.min(screenIndex, screens.length - 1)]
             visibility = Window.FullScreen
         } else {
             visibility = Window.Windowed
+            flags = windowMode === 2
+                ? Qt.Window | Qt.FramelessWindowHint
+                : Qt.Window
             if (savedGeom.width > 200) {
                 x = savedGeom.x
                 y = savedGeom.y
                 width = savedGeom.width
                 height = savedGeom.height
             }
+            visible = true
         }
     }
 
     // Each output window handles its own keys: Esc cancels tile overlays
-    // first, then leaves fullscreen; F11 toggles fullscreen.
+    // first, then returns to a normal window; F11 toggles fullscreen.
     Item {
         id: outKeys
         focus: true
@@ -96,12 +107,12 @@ Window {
                 out.menuOpen = false
                 return
             }
-            if (!tc.cancelOverlays() && out.fullscreenOn)
-                out.fullscreenToggled(false)
+            if (!tc.cancelOverlays() && out.windowMode !== 0)
+                out.modeChangeRequested(0)
         }
         Keys.onPressed: event => {
             if (event.key === Qt.Key_F11) {
-                out.fullscreenToggled(!out.fullscreenOn)
+                out.modeChangeRequested(out.windowMode === 1 ? 0 : 1)
                 event.accepted = true
             }
         }
@@ -115,29 +126,57 @@ Window {
         globalShowName: out.showTileNames
         tileGap: out.tileGap
         availableSources: out.availableSources
+        // Windowless has no title bar — dragging the canvas background
+        // moves the window, same as the main window.
+        moveWindowOnDrag: out.windowMode === 2
         focusTarget: outKeys
         emptyHint: out.isTarget
             ? "This canvas is receiving — click sources in the main window to add them here"
-            : "Empty canvas — pick it under CANVASES in the main window (or hover the top edge and open the ⋯ menu), then click sources"
+            : "Empty canvas — pick it under CANVASES in the main window (or hover the bottom edge and open the ⋯ menu), then click sources"
         onTilesMutated: out.tilesMutated()
     }
 
+    // Frameless windows have no OS resize borders — provide our own edges
+    // and corners in windowless mode via startSystemResize.
+    component ResizeEdge: MouseArea {
+        property int edges
+        z: 200
+        onPressed: out.startSystemResize(edges)
+    }
+
+    Item {
+        anchors.fill: parent
+        visible: out.windowMode === 2
+        z: 200
+
+        ResizeEdge { x: 0; y: 10; width: 7; height: parent.height - 20; edges: Qt.LeftEdge; cursorShape: Qt.SizeHorCursor }
+        ResizeEdge { x: parent.width - 7; y: 10; width: 7; height: parent.height - 20; edges: Qt.RightEdge; cursorShape: Qt.SizeHorCursor }
+        ResizeEdge { x: 10; y: 0; width: parent.width - 20; height: 7; edges: Qt.TopEdge; cursorShape: Qt.SizeVerCursor }
+        ResizeEdge { x: 10; y: parent.height - 7; width: parent.width - 20; height: 7; edges: Qt.BottomEdge; cursorShape: Qt.SizeVerCursor }
+        ResizeEdge { x: 0; y: 0; width: 12; height: 12; edges: Qt.LeftEdge | Qt.TopEdge; cursorShape: Qt.SizeFDiagCursor }
+        ResizeEdge { x: parent.width - 12; y: 0; width: 12; height: 12; edges: Qt.RightEdge | Qt.TopEdge; cursorShape: Qt.SizeBDiagCursor }
+        ResizeEdge { x: 0; y: parent.height - 12; width: 12; height: 12; edges: Qt.LeftEdge | Qt.BottomEdge; cursorShape: Qt.SizeBDiagCursor }
+        ResizeEdge { x: parent.width - 12; y: parent.height - 12; width: 12; height: 12; edges: Qt.RightEdge | Qt.BottomEdge; cursorShape: Qt.SizeFDiagCursor }
+    }
+
     // -------------------------------------------------- ⋯ dropdown menu
-    // All output controls live in a dropdown so nothing overlays the
-    // tiles: hovering the top edge reveals only a small ⋯ button in the
-    // corner, and the menu itself stacks above the tile layer with a
-    // full-window click-catcher underneath — no click, press or drag
-    // can leak through to a tile while it is open.
+    // All output controls live in a dropdown at the BOTTOM of the canvas:
+    // tile headers and their ⋯ menus sit at the top of every tile, so a
+    // bottom-edge button can never block them (Max's spec). Hovering the
+    // bottom edge reveals the small ⋯ button; the menu opens upward and
+    // stacks above the tile layer with a full-window click-catcher
+    // underneath — no click, press or drag can leak through to a tile
+    // while it is open.
     property bool menuOpen: false
 
-    // Top-edge hover zone reveals the ⋯ button (hover only, never
+    // Bottom-edge hover zone reveals the ⋯ button (hover only, never
     // intercepts clicks aimed at tiles).
     Item {
-        anchors.top: parent.top
+        anchors.bottom: parent.bottom
         anchors.left: parent.left
         anchors.right: parent.right
         height: 44
-        HoverHandler { id: topZone }
+        HoverHandler { id: bottomZone }
     }
 
     component OutBtn: Rectangle {
@@ -164,9 +203,10 @@ Window {
 
     Rectangle {
         id: menuBtn
-        anchors.top: parent.top
+        anchors.bottom: parent.bottom
         anchors.right: parent.right
         anchors.margins: 8
+        z: 300
         width: 32
         height: 26
         radius: 3
@@ -175,7 +215,7 @@ Window {
         border.width: 1
         border.color: out.menuOpen ? "#3d7eff" : "#2a2a2e"
         visible: opacity > 0
-        opacity: (topZone.hovered || menuBtnHover.hovered || out.menuOpen)
+        opacity: (bottomZone.hovered || menuBtnHover.hovered || out.menuOpen)
                  ? 1 : 0
         Behavior on opacity { NumberAnimation { duration: 150 } }
 
@@ -199,15 +239,17 @@ Window {
     MouseArea {
         anchors.fill: parent
         visible: out.menuOpen
+        z: 300
         onClicked: out.menuOpen = false
     }
 
     Rectangle {
         visible: out.menuOpen
-        anchors.top: menuBtn.bottom
-        anchors.topMargin: 4
+        anchors.bottom: menuBtn.top
+        anchors.bottomMargin: 4
         anchors.right: parent.right
         anchors.rightMargin: 8
+        z: 300
         width: 200
         height: menuCol.height + 20
         radius: 6
@@ -243,6 +285,32 @@ Window {
             }
 
             Text {
+                text: "WINDOW"
+                color: "#5a5a60"
+                font.pixelSize: 9
+            }
+            Flow {
+                width: menuCol.width
+                spacing: 4
+
+                OutBtn {
+                    label: "Windowed"
+                    active: out.windowMode === 0
+                    onActivated: out.modeChangeRequested(0)
+                }
+                OutBtn {
+                    label: "Fullscreen"
+                    active: out.windowMode === 1
+                    onActivated: out.modeChangeRequested(1)
+                }
+                OutBtn {
+                    label: "Windowless"
+                    active: out.windowMode === 2
+                    onActivated: out.modeChangeRequested(2)
+                }
+            }
+
+            Text {
                 visible: Qt.application.screens.length > 1
                 text: "MONITOR"
                 color: "#5a5a60"
@@ -266,14 +334,6 @@ Window {
                 }
             }
 
-            OutBtn {
-                width: menuCol.width
-                label: out.fullscreenOn ? "Exit fullscreen" : "Fullscreen"
-                onActivated: {
-                    out.menuOpen = false
-                    out.fullscreenToggled(!out.fullscreenOn)
-                }
-            }
             OutBtn {
                 width: menuCol.width
                 label: "Close this canvas"
