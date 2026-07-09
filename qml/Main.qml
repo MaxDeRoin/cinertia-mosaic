@@ -146,6 +146,9 @@ ApplicationWindow {
 
     // Keep the display awake (show-day mode).
     property bool neverSleep: false
+    // Switching profiles: keep canvases the profile doesn't include open
+    // (true, default) or close them (false).
+    property bool keepCanvases: true
     // TCP remote control for Stream Deck / Bitfocus Companion.
     property bool remoteEnabled: false
     property int remotePort: 9955
@@ -316,13 +319,18 @@ ApplicationWindow {
         return arr
     }
 
-    function applyOutputs(outputs) {
+    // keepExtra: canvases beyond the profile's list stay open untouched
+    // (they fold into the now-active profile on the next autosave)
+    // instead of closing — the "Keep canvases when switching profiles"
+    // setting.
+    function applyOutputs(outputs, keepExtra) {
         if (!outputs)
             outputs = []
         // Match window count to the target: surplus windows close (their
         // receivers shut down), missing ones open.
-        while (outputModel.count > outputs.length)
-            outputModel.remove(outputModel.count - 1)
+        if (!keepExtra)
+            while (outputModel.count > outputs.length)
+                outputModel.remove(outputModel.count - 1)
         while (outputModel.count < outputs.length)
             outputModel.append({ name: "Output " + (outputModel.count + 2),
                                  screenIndex: 0, mode: 0 })
@@ -400,7 +408,9 @@ ApplicationWindow {
             return
         syncActiveProfile() // don't lose changes made since the last tick
         canvas.applyTiles(p.tiles)
-        applyOutputs(p.outputs) // older profiles have none: closes extras
+        // Canvases the profile doesn't know: kept open or closed per the
+        // "Keep canvases when switching profiles" setting.
+        applyOutputs(p.outputs, keepCanvases)
         currentProfile = name
     }
 
@@ -422,6 +432,7 @@ ApplicationWindow {
             showTileNames: showTileNames,
             allowDuplicates: allowDuplicates,
             neverSleep: neverSleep,
+            keepCanvases: keepCanvases,
             remoteEnabled: remoteEnabled,
             remotePort: remotePort,
             currentProfile: currentProfile,
@@ -449,6 +460,7 @@ ApplicationWindow {
                 showTileNames = s.showTileNames !== false
                 allowDuplicates = s.allowDuplicates === true
                 neverSleep = s.neverSleep === true
+                keepCanvases = s.keepCanvases !== false
                 remoteEnabled = s.remoteEnabled === true
                 if (s.remotePort !== undefined)
                     remotePort = s.remotePort
@@ -1161,6 +1173,11 @@ ApplicationWindow {
                 label: "Allow duplicate sources"
                 checked: window.allowDuplicates
                 onToggled: window.allowDuplicates = !window.allowDuplicates
+            }
+            CheckRow {
+                label: "Keep canvases when switching profiles"
+                checked: window.keepCanvases
+                onToggled: window.keepCanvases = !window.keepCanvases
             }
             CheckRow {
                 label: "Keep display awake"

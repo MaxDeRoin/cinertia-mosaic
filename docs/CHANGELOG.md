@@ -6,6 +6,24 @@ Vizrt NDI AB.
 
 ---
 
+## Unreleased
+
+### Tiles
+- **Uncrop button:** removes a tile's crop and shows the full frame
+  again. Appears in the tile header only while a crop is active.
+- **Fit respects crops:** on a cropped tile, Fit now keeps the crop
+  and the tile's current size and shape, refitting the cropped region
+  inside the tile (zoom, pan and rotation reset). Previously Fit
+  discarded the crop and reshaped the tile.
+
+### Profiles
+- **Keep canvases when switching profiles (new setting, on by
+  default):** canvases not saved in the selected profile now stay open
+  unchanged instead of closing. Turn the setting off to restore the
+  previous behavior.
+
+---
+
 ## 0.3.0 — 2026-07-08
 
 ### Multi-monitor canvases

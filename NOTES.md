@@ -12,6 +12,16 @@ approval from the NDI team, so everything internal uses this codename for now.
 Easy to rename later.
 
 ## Current status
+**Post-0.3.0 fixes (awaiting Max's test):**
+1. **Uncrop button + Fit respects crops** — Uncrop appears in a tile's
+   header while a crop is active and removes it. Fit on a cropped tile
+   keeps the crop and the tile's size/shape, refitting the cropped
+   region inside the tile; Fit on an uncropped tile behaves as before
+   (reset view + reshape tile to the video's aspect).
+2. **Keep canvases when switching profiles** — new setting (on by
+   default): canvases a profile doesn't include stay open unchanged
+   instead of closing. See docs/CHANGELOG.md "Unreleased".
+
 **Current release: 0.3.0** — `dist\Mosaic-Setup-0.3.0.exe`, with the
 full distribution package in `dist\Mosaic-0.3.0-Package(.zip)`:
 installer + PDF user guide + README + Companion module. Version

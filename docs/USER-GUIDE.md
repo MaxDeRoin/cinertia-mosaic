@@ -62,7 +62,8 @@ keep network/CPU use down.
 ## Tiles
 
 Hover a tile to reveal its **header**: the name, then
-⟲ ⟳ (rotate 90°), Crop, Fit, Size, ⋯ (options), ✕ (close).
+⟲ ⟳ (rotate 90°), Crop, Uncrop (shown only while a crop is active),
+Fit, Size, ⋯ (options), ✕ (close).
 
 ### Selecting
 Click a tile to select it — it gets a blue border and comes to the
@@ -87,9 +88,14 @@ tile. Click empty canvas to deselect.
   90° jumps.
 - **Crop:** click **Crop**, drag a box over the region you want; the
   tile shows only that region. Crops can be stacked. Esc cancels.
+- **Uncrop:** removes the crop and shows the full frame again. The
+  button appears in the header only while a crop is active.
 - **Double-click:** reset zoom/pan.
-- **Fit:** resets everything *and* reshapes the tile to the video's
-  aspect ratio — picture fills the frame, no black bars.
+- **Fit:** on an uncropped tile, resets the view *and* reshapes the
+  tile to the video's aspect ratio — picture fills the frame, no black
+  bars. On a **cropped** tile, Fit keeps the crop and the tile's
+  current size and shape, and refits the cropped region inside the
+  tile (zoom, pan and rotation reset).
 
 ### Tile options (the ⋯ menu)
 Click ⋯ in the tile header (click anywhere else to close it):
@@ -148,6 +154,12 @@ Profiles capture **every canvas** — the main one and any extra output
 canvases (below), including which monitor each output is on and its
 window type. Switching profiles switches the whole multi-monitor
 look at once.
+
+If you switch to a profile that doesn't include one of your open
+canvases, the canvas **stays open unchanged** by default (and is added
+to the now-active profile on its next auto-save). Prefer the canvas to
+close instead? Turn off **Settings → Keep canvases when switching
+profiles**.
 
 ---
 
@@ -216,6 +228,7 @@ program/preview wall on the stage-left TV.
 | Rotate with Alt+scroll | Toggle wheel rotation |
 | Show tile names | Master switch for all tile labels |
 | Allow duplicate sources | Off (default): sidebar clicks toggle a source on/off. On: each click adds another copy of the source |
+| Keep canvases when switching profiles | On (default): canvases not saved in the selected profile stay open unchanged. Off: they close |
 | Keep display awake | Stops Windows blanking the screen (unattended operation) |
 | Remote control + port | The Companion/Stream Deck TCP interface |
 | Tile spacing | Gap used by layouts; 0 = seamless |

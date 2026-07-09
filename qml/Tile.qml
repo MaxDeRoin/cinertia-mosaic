@@ -271,17 +271,36 @@ Item {
                     onActivated: tile.cropMode = !tile.cropMode
                 }
                 TileBtn {
+                    // Undo the crop (full frame again). Only offered while
+                    // a crop is active; Fit no longer touches the crop.
+                    label: "Uncrop"
+                    visible: video.cropped
+                    onActivated: {
+                        tile.cropMode = false
+                        video.clearCrop()
+                    }
+                }
+                TileBtn {
                     label: "Fit"
                     onActivated: {
-                        // Reset the view AND shape the tile to the video so
-                        // the picture fills the frame with no black bars.
                         tile.cropMode = false
-                        video.resetView()
-                        const vs = video.videoSize
-                        if (vs.width > 0 && vs.height > 0) {
-                            const nh = Math.max(tile.minH,
-                                Math.round(tile.width * vs.height / vs.width))
-                            tile.height = nh
+                        if (video.cropped) {
+                            // Cropped: refit the cropped region inside the
+                            // tile as it is — keep the crop AND the tile's
+                            // current size and shape (Max's spec).
+                            video.rotateBy(-video.viewRotation)
+                            video.resetZoomPan()
+                        } else {
+                            // Uncropped: reset the view AND shape the tile
+                            // to the video so the picture fills the frame
+                            // with no black bars.
+                            video.resetView()
+                            const vs = video.videoSize
+                            if (vs.width > 0 && vs.height > 0) {
+                                const nh = Math.max(tile.minH,
+                                    Math.round(tile.width * vs.height / vs.width))
+                                tile.height = nh
+                            }
                         }
                     }
                 }
