@@ -5,6 +5,7 @@ I am an IT/AV professional, not a programmer. You (Claude) write all the code. E
 
 ## Ways of working
 - Use git. Commit after every working milestone with a clear message. If I say "roll back," restore the last working commit.
+- The GitHub repository is the source of truth between machines (Windows dev PC + Mac). Pull before starting work, push after every committed milestone. The macOS port happens on the `macos-port` branch (see milestone 8 notes); Windows work stays on `master`. Never break the other platform's build.
 - Work in the milestone order below. Do not skip ahead. Get my sign-off before moving to the next milestone.
 - After each build, launch the app (or tell me how) so I can verify.
 - If a library, tool, or SDK is missing, install or configure it yourself and tell me what you did.
@@ -67,7 +68,16 @@ A professional NDI multiviewer for the AV/broadcast industry. It receives multip
    - Max (2026-07-06): **never-sleep option** in settings — keep the display awake while the app runs (multiviewers run unattended on show days; Windows must not blank the monitor).
    - Max (2026-07-06): **rename tiles** — per-tile custom label overriding the source name in the overlay/header (e.g. "CAM 1 — STAGE LEFT" instead of the NDI source name).
 7. **Installer** — Inno Setup .exe installer, version numbering, app icon.
-8. **(Future) macOS port** — do not build now, but never introduce Windows-only dependencies without flagging it to me.
+8. **macOS port (active on the Mac session)** — work on the `macos-port` branch; the Windows build on `master` must keep working. Notes for the Mac session:
+   - Read NOTES.md first — it maps the whole project in plain English. Current release is 0.3.5; all v1 milestones are done and signed off on Windows.
+   - **Toolchain:** install Xcode Command Line Tools, CMake, and Qt 6 (6.8.x, via aqtinstall like the Windows setup). The CMake build is already cross-platform-clean.
+   - **NDI:** download the NDI SDK for Apple from ndi.video (may need Max to click through the license). The receive code in `src/ndi/` uses only the portable NDI API; the macOS SDK ships a dylib to bundle instead of the Windows DLL. Frames arrive as UYVY/BGRA exactly as on Windows.
+   - **Known Windows-only pieces (all isolated):**
+     - `PowerGuard` (never-sleep, `src/` — uses SetThreadExecutionState): macOS equivalent is IOKit power assertions (IOPMAssertionCreateWithName).
+     - `resources/mosaic.rc` (icon/version resources): macOS uses an `.icns` icon and Info.plist in the app bundle instead.
+     - `installer/mosaic.iss` (Inno Setup) and `scripts/stage-deploy.ps1`: macOS distribution is a `.dmg` with `macdeployqt`; signing/notarization comes later (needs Max's Apple Developer account — not required for local testing).
+   - Rendering already targets Metal automatically through Qt RHI. Check the fullscreen/frameless window dance in `Main.qml`/`OutputWindow.qml` (`applyMode`/`applyDisplayMode`) — window-flag behavior differs on macOS and those functions contain Windows-specific workarounds.
+   - Test against Max's real NDI sources on the same network, milestone-by-milestone like the Windows build: hello-world window first, then single source, then the full app.
 
 ## Definition of done for v1
 I can run the installer on a clean Windows machine, launch the app, add 4+ live NDI sources from my network, arrange them how I want, zoom into a detail on one of them, go fullscreen on a second monitor, and it looks and feels like a professional broadcast tool.
