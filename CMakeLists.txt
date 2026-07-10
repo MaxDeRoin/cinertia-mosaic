@@ -90,6 +90,7 @@ qt_add_qml_module(Mosaic
 # UYVY→RGB conversion shaders, compiled by Qt's shader tools for every
 # graphics backend (D3D on Windows, Metal on macOS).
 qt6_add_shaders(Mosaic "mosaic_shaders"
+    BATCHABLE # Qt Quick materials need the batchable vertex variant
     PREFIX "/"
     FILES shaders/uyvy.vert shaders/uyvy.frag
 )

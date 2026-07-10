@@ -33,10 +33,13 @@ QImage wrapFrame(const NDIlib_video_frame_v2_t &frame, int *uyvyWidth)
         || frame.FourCC == NDIlib_FourCC_video_type_UYVA;
     if (packed) {
         *uyvyWidth = frame.xres;
+        // RGBX (not RGBA): the fourth byte is luma, not transparency — an
+        // alpha format would get premultiplied during the texture upload,
+        // crushing the whole frame toward black. RGBX uploads untouched.
         return QImage(reinterpret_cast<const uchar *>(frame.p_data),
                       frame.xres / 2, frame.yres,
                       frame.line_stride_in_bytes,
-                      QImage::Format_RGBA8888).copy();
+                      QImage::Format_RGBX8888).copy();
     }
     *uyvyWidth = 0;
     const QImage::Format format =
