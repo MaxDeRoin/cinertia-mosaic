@@ -19,6 +19,9 @@ Vizrt NDI AB.
   NDI® proxy stream and back, cutting CPU and network use on dense
   multiview grids. The per-tile Low bandwidth toggle still forces the
   proxy stream at any size.
+- **Sources are polled at their own frame rate:** each receive poll
+  costs a frame copy inside the NDI® frame sync, so a 30 fps camera is
+  now polled 30 times a second instead of 60.
 - **Repeated frames are no longer reprocessed:** sources below 60 fps
   — and still images such as test patterns — previously had every
   frame copied and re-uploaded to the GPU 60 times a second. Unchanged

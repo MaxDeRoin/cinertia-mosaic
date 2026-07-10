@@ -181,6 +181,16 @@ void NdiReceiveWorker::poll()
     NDIlib_framesync_free_video(
         static_cast<NDIlib_framesync_instance_t>(m_framesync), &frame);
 
+    // Match the poll rate to the source: every capture call costs a full
+    // frame copy inside the frame sync, so polling a 30 fps camera at
+    // 60 Hz doubles that cost for nothing. (Audio metering still runs on
+    // every tick above, at most 40 ms apart.)
+    if (fps > 1.0 && m_timer) {
+        const int target = qBound(8, int(1000.0 / fps + 0.5), 40);
+        if (m_timer->interval() != target)
+            m_timer->setInterval(target);
+    }
+
     if (info != m_streamInfo) {
         m_streamInfo = info;
         setStatus(info);
