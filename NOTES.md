@@ -130,20 +130,38 @@ System Settings → Privacy & Security → Local Network first.
 project, the Qt install, and all build output live on the external **"Max
 DeRoin"** drive. That drive must be mounted to build or run during development.
 
-**Done:** toolchain, dark-theme hello-world, NDI SDK wired in, and a single
-live NDI source playing in a tile (milestones 1–2 equivalent).
+**Done:** toolchain, dark-theme hello-world, NDI SDK wired in, a single live
+NDI source in a tile, and the rest of the app exercised on macOS — transforms
+(zoom/pan/rotate/crop), multi-tile canvas + layout presets, and the
+fullscreen/windowless/windowed modes (the risky part) all work, driven and
+verified via the TCP remote control. Milestones 1–3 equivalent. Signed off by
+Max 2026-07-09.
+
+**One macOS render fix (2026-07-09):** a zoomed-in tile let the enlarged video
+paint over the tile's 1px border — the video item wasn't clipping to its own
+inset rect, so the zoomed content only stopped at the outer edge. Metal's
+subpixel rounding made the bleed visible (Direct3D hid it). Fix: `clip: true`
+on the `VideoView` in `Tile.qml`. Correct on both platforms.
+
+**Heads-up — the external drive is exFAT and hits a macOS Sequoia bug.** Under
+heavy I/O (e.g. a burst of rebuilds) the FSKit exFAT driver can start failing
+ALL writes with "Operation not permitted" (EPERM) while reads still work and
+`diskutil` still reports the volume read-write. It is not a permissions or git
+problem. Fix: remount the volume —
+`diskutil unmount force "/Volumes/Max DeRoin" && diskutil mount disk4s1`
+(quit anything running from the drive first). A permanent fix would be
+reformatting the drive to APFS/HFS+, but that erases it, so not now.
 
 **Still to do on the Mac (next, in order):**
-1. Exercise the rest of the app on macOS against real sources: transforms
-   (zoom/pan/rotate/crop), multi-tile canvas, and especially the
-   fullscreen/frameless window handling in `Main.qml`/`OutputWindow.qml`
-   (`applyMode`/`applyDisplayMode`) — those contain Windows-specific
-   window-flag workarounds that need a Mac pass.
-2. Mac versions of the Windows-only pieces that are currently no-ops:
+1. Mac versions of the Windows-only pieces that are currently no-ops:
    never-sleep (IOKit power assertions instead of Windows' SetThreadExecution),
    and the app icon (`.icns` + Info.plist instead of the `.rc` resource).
-3. Distribution as a `.dmg` with `macdeployqt` (signing/notarization later —
-   needs Max's Apple Developer account, not required for local testing).
+2. Distribution as a `.dmg` with `macdeployqt`. **Code-signing belongs here:**
+   an unsigned dev build changes its ad-hoc signature every rebuild, so macOS
+   re-shows the "access files on a removable volume" prompt each time (the app
+   still runs). A signing identity fixes that and is needed for the release
+   anyway; notarization needs Max's Apple Developer account (not required for
+   local testing).
 
 ## Tools installed on the Mac (for the macOS port)
 Everything sizable lives on the external **"Max DeRoin"** drive to keep the
