@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mosaic — Professional NDI® Multiviewer for Windows & macOS</title>
+<meta name="description" content="Mosaic is a professional NDI® multiviewer: free-form video tiles, GPU zoom/pan/crop, instant profiles, multi-monitor output, and Stream Deck control. For Windows and macOS.">
+<link rel="icon" type="image/png" href="img/mosaic-icon.png">
+<style>
+  :root {
+    --bg: #0e0e10; --panel: #141417; --line: #26262b;
+    --text: #e8e8ea; --dim: #8a8a90; --accent: #3d7eff;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { background: var(--bg); color: var(--text);
+    font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased; }
+  a { color: var(--accent); text-decoration: none; }
+  .wrap { max-width: 1060px; margin: 0 auto; padding: 0 24px; }
+
+  header { padding: 18px 0; border-bottom: 1px solid var(--line); }
+  header .wrap { display: flex; align-items: center; gap: 12px; }
+  header img { width: 30px; height: 30px; }
+  header .name { font-weight: 600; letter-spacing: .4px; }
+  header nav { margin-left: auto; display: flex; gap: 22px; font-size: 14px; }
+  header nav a { color: var(--dim); }
+  header nav a:hover { color: var(--text); }
+
+  .hero { text-align: center; padding: 72px 0 40px; }
+  .hero img.logo { width: 108px; height: 108px; margin-bottom: 22px; }
+  .hero h1 { font-size: 52px; font-weight: 700; letter-spacing: 1px; }
+  .hero p.tag { max-width: 640px; margin: 14px auto 0; color: var(--dim); font-size: 19px; }
+  .cta { margin-top: 34px; display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+  .btn { display: inline-block; padding: 13px 26px; border-radius: 9px; font-weight: 600;
+    background: var(--accent); color: #fff; transition: filter .15s; }
+  .btn:hover { filter: brightness(1.12); }
+  .btn.ghost { background: transparent; border: 1px solid var(--line); color: var(--text); }
+  .btn.ghost:hover { border-color: var(--dim); filter: none; }
+  .cta .sub { width: 100%; color: var(--dim); font-size: 13px; margin-top: 6px; }
+
+  .shot { margin: 44px auto 0; }
+  .shot img { width: 100%; border-radius: 12px; border: 1px solid var(--line); display: block; }
+
+  section { padding: 72px 0 0; }
+  h2 { font-size: 26px; margin-bottom: 26px; text-align: center; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 22px; }
+  .card h3 { font-size: 16px; margin-bottom: 8px; }
+  .card h3::before { content: "▪ "; color: var(--accent); }
+  .card p { color: var(--dim); font-size: 14.5px; }
+
+  .install { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
+  .install .card ol { margin: 10px 0 0 20px; color: var(--dim); font-size: 14.5px; }
+  .install .card li { margin-bottom: 6px; }
+  .install .card .os { font-size: 18px; font-weight: 600; }
+  .install .card .req { color: var(--dim); font-size: 13px; }
+
+  .duo { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 26px; }
+  .duo img { width: 100%; border-radius: 10px; border: 1px solid var(--line); display: block; }
+  @media (max-width: 760px) { .duo { grid-template-columns: 1fr; } }
+
+  footer { margin-top: 88px; padding: 30px 0 44px; border-top: 1px solid var(--line);
+    text-align: center; color: var(--dim); font-size: 13px; }
+  footer a { color: var(--dim); text-decoration: underline; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <img src="img/mosaic-icon.png" alt="">
+    <span class="name">Mosaic</span>
+    <nav>
+      <a href="#features">Features</a>
+      <a href="#install">Install</a>
+      <a href="https://github.com/TehBeef/cinertia-mosaic/blob/master/docs/USER-GUIDE.md">User Guide</a>
+      <a href="https://github.com/TehBeef/cinertia-mosaic">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<div class="hero wrap">
+  <img class="logo" src="img/mosaic-icon.png" alt="Mosaic icon">
+  <h1>Mosaic</h1>
+  <p class="tag">A professional NDI® multiviewer for Windows and macOS. Every source on
+  your network, arranged exactly how you want it.</p>
+  <div class="cta">
+    <a class="btn" href="https://github.com/TehBeef/cinertia-mosaic/releases/latest">⬇&nbsp; Download for Windows</a>
+    <a class="btn" href="https://github.com/TehBeef/cinertia-mosaic/releases/latest">⬇&nbsp; Download for macOS</a>
+    <div class="sub">Windows 10/11 · macOS 12+ (Apple Silicon &amp; Intel) · Free</div>
+  </div>
+  <div class="shot">
+    <img src="img/fig-hero.png" alt="Mosaic running a 1+side broadcast layout with four NDI sources">
+  </div>
+</div>
+
+<section id="features" class="wrap">
+  <h2>Built for show day</h2>
+  <div class="grid">
+    <div class="card"><h3>Automatic NDI® discovery</h3>
+      <p>Every NDI® source on the network appears in the sidebar — click to add it to the wall. Duplicate one source into several tiles for wide shot + detail.</p></div>
+    <div class="card"><h3>Free-form canvas</h3>
+      <p>Drag, resize, and layer tiles anywhere, or snap to a grid. One-click broadcast layouts: 2×2, 3×3, 4×4, 1+side, 2+8.</p></div>
+    <div class="card"><h3>GPU view controls per tile</h3>
+      <p>Scroll to zoom, drag to pan, crop to a detail, rotate — instant, on the GPU, at full source frame rate. Direct3D on Windows, Metal on macOS.</p></div>
+    <div class="card"><h3>Instant profiles</h3>
+      <p>Save a complete look — sources, layout, every tile's view — and switch in one click, one hotkey, or one Stream Deck button. Shared sources never reconnect.</p></div>
+    <div class="card"><h3>Multi-monitor canvases</h3>
+      <p>Open extra output windows, each a full canvas: windowed, fullscreen on any display, or frameless. A saved profile restores the whole multi-display look.</p></div>
+    <div class="card"><h3>Stream Deck control</h3>
+      <p>Native Bitfocus Companion module with live profile dropdowns and active-profile button feedback — plus a simple TCP protocol for anything else.</p></div>
+    <div class="card"><h3>Clean, minimal chrome</h3>
+      <p>Dark theme, hover-reveal controls, windowless mode. The video is the interface.</p></div>
+    <div class="card"><h3>Show-day details</h3>
+      <p>Rename tiles ("CAM 1 — STAGE LEFT"), name overlays, audio meters, low-bandwidth mode for small tiles, keep-display-awake, session autosave.</p></div>
+  </div>
+  <div class="duo">
+    <img src="img/fig-overview.png" alt="The full Mosaic window: sidebar with sources, layouts and profiles">
+    <img src="img/fig-zoom.png" alt="Zooming into a detail inside a tile">
+  </div>
+</section>
+
+<section id="install" class="wrap">
+  <h2>Install in a minute</h2>
+  <div class="install">
+    <div class="card">
+      <div class="os">Windows</div>
+      <div class="req">Windows 10/11, 64-bit</div>
+      <ol>
+        <li>Download <code>Mosaic-Setup-&lt;version&gt;.exe</code> from the <a href="https://github.com/TehBeef/cinertia-mosaic/releases/latest">latest release</a> and run it.</li>
+        <li>When Windows Firewall asks, click <b>Allow</b> — NDI® needs network access.</li>
+      </ol>
+    </div>
+    <div class="card">
+      <div class="os">macOS</div>
+      <div class="req">macOS 12+ · Apple Silicon &amp; Intel</div>
+      <ol>
+        <li>Download <code>Mosaic-&lt;version&gt;.dmg</code> from the <a href="https://github.com/TehBeef/cinertia-mosaic/releases/latest">latest release</a>, drag <b>Mosaic</b> to <b>Applications</b>.</li>
+        <li>First launch: <b>right-click → Open</b> (needed once).</li>
+        <li>Click <b>Allow</b> on the Local Network permission — that's NDI® discovery.</li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Mosaic is a working title by Cinertia Systems ·
+    <a href="https://github.com/TehBeef/cinertia-mosaic">Source on GitHub</a><br>
+    NDI® is a registered trademark of Vizrt NDI AB — <a href="https://ndi.video">ndi.video</a>
+  </div>
+</footer>
+
+</body>
+</html>
