@@ -12,7 +12,17 @@ approval from the NDI team, so everything internal uses this codename for now.
 Easy to rename later.
 
 ## Current status
-**Current release: 0.4.5 (Windows + macOS) — complete on the release
+**Current release: 0.5.0 — the performance release.** GPU pixel-format
+conversion, auto proxy for small tiles, per-source poll rates, and
+repeated-frame skipping (see docs/CHANGELOG.md). Windows installer,
+guide PDF and Companion module are on the v0.5.0 GitHub release; the
+macOS dmg gets attached from the Mac, which then marks v0.5.0 as the
+latest release (it is deliberately NOT latest until the dmg is there,
+so the website's Mac download button keeps working). Building the
+Windows side now needs the Qt ShaderTools module (installed via
+aqtinstall, like the Mac).
+
+**Previous release: 0.4.5 (Windows + macOS) — complete on the release
 page.** All four downloads are attached to the v0.4.5 GitHub release
 (`Mosaic-Setup-0.4.5.exe`, `Mosaic-0.4.5.dmg`, the user guide PDF, and
 the Companion module) and linked from the website. The Mac build of

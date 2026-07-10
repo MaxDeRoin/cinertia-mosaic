@@ -6,7 +6,7 @@ Vizrt NDI AB.
 
 ---
 
-## Unreleased
+## 0.5.0 — 2026-07-10
 
 ### Performance
 - **Video conversion moved to the GPU:** NDI® frames previously had
