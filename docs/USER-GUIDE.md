@@ -275,6 +275,7 @@ Settings, profiles, and the session are stored per user in
 | F11 | Toggle fullscreen |
 | Esc | Cancel crop / close dialogs / back to windowed |
 | Ctrl (held while dragging) | Snap to grid |
+| Shift (held while dragging the picture) | Move the picture inside the tile |
 | Alt+scroll | Rotate the video under the cursor |
 
 ---
