@@ -39,6 +39,15 @@ qt_add_executable(Mosaic
 )
 if(WIN32)
     target_sources(Mosaic PRIVATE resources/mosaic.rc)
+elseif(APPLE)
+    # App icon: bundle the .icns into the .app and point Info.plist's
+    # CFBundleIconFile at it (the macOS counterpart of the Windows .rc icon).
+    set(MOSAIC_ICNS "${CMAKE_CURRENT_SOURCE_DIR}/resources/mosaic.icns")
+    target_sources(Mosaic PRIVATE "${MOSAIC_ICNS}")
+    set_source_files_properties("${MOSAIC_ICNS}" PROPERTIES
+        MACOSX_PACKAGE_LOCATION Resources)
+    set_target_properties(Mosaic PROPERTIES
+        MACOSX_BUNDLE_ICON_FILE "mosaic.icns")
 endif()
 
 qt_add_qml_module(Mosaic
