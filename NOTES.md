@@ -12,10 +12,13 @@ approval from the NDI team, so everything internal uses this codename for now.
 Easy to rename later.
 
 ## Current status
-**Current release: 0.3.5** — `dist\Mosaic-Setup-0.3.5.exe`, with the
-full distribution package in `dist\Mosaic-0.3.5-Package(.zip)`:
-installer + PDF user guide + README + Companion module. Version
-history: `docs/CHANGELOG.md`.
+**Current release: 0.4.0 — first cross-platform release (Windows +
+macOS).** Downloads live on the GitHub release page (v0.4.0 carries
+`Mosaic-Setup-0.4.0.exe` and `Mosaic-0.4.0.dmg`) and are linked from
+the website. The macos-port branch is merged into master; both
+platforms build from one codebase. Version history:
+`docs/CHANGELOG.md`. The 0.3.5 distribution package
+(`dist\Mosaic-0.3.5-Package.zip`) remains the last zip-style bundle.
 
 **New in 0.3.5 (tested and signed off by Max):**
 1. **Uncrop button + Fit respects crops** — Uncrop appears in a tile's
@@ -196,9 +199,9 @@ Homebrew are on the internal drive (they were already there).
   served from the `gh-pages` branch (a single `index.html` + `img/`; edit
   that branch to change the site). Set as the repo homepage.
 - **Downloads:** GitHub Releases. `v0.4.0` carries `Mosaic-0.4.0.dmg` (the
-  Mac disk image, built by `scripts/stage-deploy-mac.sh`). The Windows
-  installer gets attached from the Windows machine after the next master
-  build there.
+  Mac disk image, built by `scripts/stage-deploy-mac.sh`) and
+  `Mosaic-Setup-0.4.0.exe` (the Windows installer, built by
+  `scripts/stage-deploy.ps1` and attached 2026-07-10).
 - **Note for the Windows session:** `macos-port` is ready to merge into
   `master` — everything platform-specific is guarded (APPLE blocks in CMake,
   Q_OS_MACOS ifdefs), but per the ways of working, verify the Windows build
