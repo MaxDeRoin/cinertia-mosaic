@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.21)
 
 # "Mosaic" is a codename only — the product must not ship with "NDI" in its
 # name without approval from the NDI team (see CLAUDE.md license section).
-project(Mosaic VERSION 0.3.5 LANGUAGES CXX)
+project(Mosaic VERSION 0.4.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -46,8 +46,20 @@ elseif(APPLE)
     target_sources(Mosaic PRIVATE "${MOSAIC_ICNS}")
     set_source_files_properties("${MOSAIC_ICNS}" PROPERTIES
         MACOSX_PACKAGE_LOCATION Resources)
+    # Bundle identity/version. A stable CFBundleIdentifier also makes macOS
+    # privacy grants (Local Network, removable volume) stick across builds.
     set_target_properties(Mosaic PROPERTIES
-        MACOSX_BUNDLE_ICON_FILE "mosaic.icns")
+        MACOSX_BUNDLE_ICON_FILE "mosaic.icns"
+        MACOSX_BUNDLE_GUI_IDENTIFIER "com.cinertiasystems.mosaic"
+        MACOSX_BUNDLE_BUNDLE_NAME "Mosaic"
+        MACOSX_BUNDLE_BUNDLE_VERSION "${PROJECT_VERSION}"
+        MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION}"
+        MACOSX_BUNDLE_COPYRIGHT "© 2026 Cinertia Systems. NDI® is a registered trademark of Vizrt NDI AB.")
+    # Custom Info.plist template: adds NSLocalNetworkUsageDescription (the
+    # explanation shown in the "find devices on local networks?" dialog) and
+    # the NDI Bonjour service type on top of CMake's standard bundle keys.
+    set_target_properties(Mosaic PROPERTIES
+        MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/resources/Info.plist.in")
 endif()
 
 qt_add_qml_module(Mosaic

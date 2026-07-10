@@ -152,16 +152,26 @@ problem. Fix: remount the volume —
 (quit anything running from the drive first). A permanent fix would be
 reformatting the drive to APFS/HFS+, but that erases it, so not now.
 
-**Still to do on the Mac (next, in order):**
-1. Mac versions of the Windows-only pieces that are currently no-ops:
-   never-sleep (IOKit power assertions instead of Windows' SetThreadExecution),
-   and the app icon (`.icns` + Info.plist instead of the `.rc` resource).
-2. Distribution as a `.dmg` with `macdeployqt`. **Code-signing belongs here:**
-   an unsigned dev build changes its ad-hoc signature every rebuild, so macOS
-   re-shows the "access files on a removable volume" prompt each time (the app
-   still runs). A signing identity fixes that and is needed for the release
-   anyway; notarization needs Max's Apple Developer account (not required for
-   local testing).
+**All milestone-8 work is done — the Mac version ships as 0.4.0.**
+- Never-sleep works on macOS (IOKit power assertion in `PowerGuard`,
+  verified with `pmset -g assertions`; released on quit).
+- App icon: `resources/mosaic.icns`, drawn at 1024px with real transparency
+  (the first attempt via qlmanage had a white background — the icon is now
+  generated with Pillow). Wired via `MACOSX_BUNDLE_ICON_FILE`.
+- Bundle identity: `com.cinertiasystems.mosaic`, proper version strings, and
+  a custom `resources/Info.plist.in` that adds the Local Network usage
+  description (shown in the permission dialog) and the `_ndi._tcp` Bonjour
+  service type.
+- **Packaging:** `scripts/stage-deploy-mac.sh` (the Mac `stage-deploy.ps1`)
+  builds → `macdeployqt` (bundles Qt + QML into the .app) → codesigns →
+  produces `dist/Mosaic-<version>.dmg` with an /Applications shortcut.
+  Verified self-contained: the app runs straight from the mounted dmg.
+- **Signing:** ad-hoc (`codesign -s -`) for now — Max has no Apple Developer
+  account yet. Consequences: on another Mac the first launch needs
+  right-click → Open (documented in the user guide), and Gatekeeper shows a
+  warning. When Max gets an Apple Developer account ($99/yr), set
+  `SIGN_ID="Developer ID Application: …"` in the deploy script and add
+  notarization (`xcrun notarytool`) — then it opens clean everywhere.
 
 ## Tools installed on the Mac (for the macOS port)
 Everything sizable lives on the external **"Max DeRoin"** drive to keep the
