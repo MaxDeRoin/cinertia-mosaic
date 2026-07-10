@@ -600,14 +600,20 @@ Item {
             }
         }
 
-        // Corner resize grips (invisible, cursor changes on hover).
+        // Resize grips (invisible, cursor changes on hover): four corners
+        // resize both axes, four edge strips resize one axis only.
         component Grip: MouseArea {
             property bool onLeft: false
             property bool onTop: false
+            // Which axes this grip resizes: corners both, edges one.
+            property bool horizontal: true
+            property bool vertical: true
             width: 14
             height: 14
             z: 10
-            cursorShape: (onLeft === onTop) ? Qt.SizeFDiagCursor : Qt.SizeBDiagCursor
+            cursorShape: (horizontal && vertical)
+                ? ((onLeft === onTop) ? Qt.SizeFDiagCursor : Qt.SizeBDiagCursor)
+                : (horizontal ? Qt.SizeHorCursor : Qt.SizeVerCursor)
             property point pressScene
             property rect startGeom
 
@@ -627,17 +633,25 @@ Item {
                 let nx = startGeom.x, ny = startGeom.y
                 let nw = startGeom.width, nh = startGeom.height
 
-                if (onLeft) { nx = startGeom.x + dx; nw = startGeom.width - dx }
-                else        { nw = startGeom.width + dx }
-                if (onTop)  { ny = startGeom.y + dy; nh = startGeom.height - dy }
-                else        { nh = startGeom.height + dy }
+                if (horizontal) {
+                    if (onLeft) { nx = startGeom.x + dx; nw = startGeom.width - dx }
+                    else        { nw = startGeom.width + dx }
+                }
+                if (vertical) {
+                    if (onTop)  { ny = startGeom.y + dy; nh = startGeom.height - dy }
+                    else        { nh = startGeom.height + dy }
+                }
 
                 tile.snapDragActive = tile.snapEnabled || (mouse.modifiers & Qt.ControlModifier)
                 if (tile.snapDragActive) {
-                    if (onLeft) { const s = tile.snap(nx); nw += nx - s; nx = s }
-                    else        { nw = tile.snap(nx + nw) - nx }
-                    if (onTop)  { const s = tile.snap(ny); nh += ny - s; ny = s }
-                    else        { nh = tile.snap(ny + nh) - ny }
+                    if (horizontal) {
+                        if (onLeft) { const s = tile.snap(nx); nw += nx - s; nx = s }
+                        else        { nw = tile.snap(nx + nw) - nx }
+                    }
+                    if (vertical) {
+                        if (onTop)  { const s = tile.snap(ny); nh += ny - s; ny = s }
+                        else        { nh = tile.snap(ny + nh) - ny }
+                    }
                 }
 
                 if (nw < tile.minW) { if (onLeft) nx -= (tile.minW - nw); nw = tile.minW }
@@ -650,6 +664,13 @@ Item {
             }
         }
 
+        // Edge strips (7px, inset past the corner squares).
+        Grip { anchors.left: parent.left;  anchors.top: parent.top; anchors.bottom: parent.bottom; anchors.topMargin: 14; anchors.bottomMargin: 14; width: 7;  vertical: false; onLeft: true }
+        Grip { anchors.right: parent.right; anchors.top: parent.top; anchors.bottom: parent.bottom; anchors.topMargin: 14; anchors.bottomMargin: 14; width: 7;  vertical: false; onLeft: false }
+        Grip { anchors.top: parent.top;    anchors.left: parent.left; anchors.right: parent.right; anchors.leftMargin: 14; anchors.rightMargin: 14; height: 7; horizontal: false; onTop: true }
+        Grip { anchors.bottom: parent.bottom; anchors.left: parent.left; anchors.right: parent.right; anchors.leftMargin: 14; anchors.rightMargin: 14; height: 7; horizontal: false; onTop: false }
+
+        // Corners (declared after the edges so they win where they meet).
         Grip { anchors.left: parent.left;  anchors.top: parent.top;       onLeft: true;  onTop: true }
         Grip { anchors.right: parent.right; anchors.top: parent.top;      onLeft: false; onTop: true }
         Grip { anchors.left: parent.left;  anchors.bottom: parent.bottom; onLeft: true;  onTop: false }

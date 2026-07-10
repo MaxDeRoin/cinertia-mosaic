@@ -6,6 +6,17 @@ Vizrt NDI AB.
 
 ---
 
+## Unreleased
+
+### Tiles
+- **Resize from any side:** tiles now resize by dragging any edge, not
+  only the corners. Sides resize in one direction; corners resize
+  freely. Snap-to-grid works on all of them.
+- **Reposition the picture:** Shift+drag moves the video inside the
+  tile frame at any zoom level. Double-click or Fit resets it.
+
+---
+
 ## 0.4.0 — 2026-07-09
 
 ### Mosaic comes to the Mac

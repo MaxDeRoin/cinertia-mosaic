@@ -98,7 +98,8 @@ tile. Click empty canvas to deselect.
 ### Moving and resizing
 - **Drag the tile** (anywhere on the picture at normal zoom, or always
   by the header) to move it.
-- **Drag a corner** to resize (minimum 160×90).
+- **Drag any side or corner** to resize (minimum 160×90). Sides resize
+  in one direction; corners resize freely.
 - **Snap to grid:** hold **Ctrl** while dragging, or turn on **Snap**
   in the Layouts section. The grid appears on the canvas only while you
   drag with snapping active.
@@ -108,6 +109,9 @@ tile. Click empty canvas to deselect.
 - **Zoom:** scroll wheel or trackpad pinch — zooms toward the cursor
   (10%–3200%).
 - **Pan:** when zoomed in past 100%, drag the picture.
+- **Reposition:** **Shift+drag** moves the picture inside the tile
+  frame at any zoom level — e.g. nudge a letterboxed image off-center.
+  Double-click or **Fit** resets it.
 - **Rotate:** Alt+scroll for fine steps, or the ⟲ ⟳ header buttons for
   90° jumps.
 - **Crop:** click **Crop**, drag a box over the region you want; the

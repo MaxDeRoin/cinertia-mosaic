@@ -548,9 +548,11 @@ void NdiVideoItem::onAudioLevels(qreal left, qreal right)
 void NdiVideoItem::mousePressEvent(QMouseEvent *event)
 {
     emit interacted();
-    // At fit zoom there is nothing to pan — let the press fall through so
-    // the tile underneath can use the drag to move itself.
-    if (m_zoom <= 1.001) {
+    // Shift+drag repositions the picture inside its tile at any zoom.
+    // Without Shift, a drag at fit zoom has nothing to pan — let the press
+    // fall through so the tile underneath can use the drag to move itself.
+    const bool shiftPan = event->modifiers() & Qt::ShiftModifier;
+    if (m_zoom <= 1.001 && !shiftPan) {
         event->ignore();
         return;
     }
