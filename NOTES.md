@@ -12,15 +12,19 @@ approval from the NDI team, so everything internal uses this codename for now.
 Easy to rename later.
 
 ## Current status
-**Current release: 0.5.0 — the performance release.** GPU pixel-format
-conversion, auto proxy for small tiles, per-source poll rates, and
-repeated-frame skipping (see docs/CHANGELOG.md). Windows installer,
-guide PDF and Companion module are on the v0.5.0 GitHub release; the
-macOS dmg gets attached from the Mac, which then marks v0.5.0 as the
-latest release (it is deliberately NOT latest until the dmg is there,
-so the website's Mac download button keeps working). Building the
-Windows side now needs the Qt ShaderTools module (installed via
-aqtinstall, like the Mac).
+**Current release: 0.5.0 — the performance release, complete on both
+platforms.** GPU pixel-format conversion, auto proxy for small tiles,
+per-source poll rates, and repeated-frame skipping (see
+docs/CHANGELOG.md). All four downloads are on the v0.5.0 GitHub
+release (`Mosaic-Setup-0.5.0.exe`, `Mosaic-0.5.0.dmg`, the user guide
+PDF, the Companion module), and v0.5.0 is marked latest. The Mac build
+was verified against live sources 2026-07-10 and signed off by Max:
+GPU (Metal) color conversion is pixel-identical to the old CPU path on
+SMPTE 601 bars with neutral grays, no striping/combing at 6x zoom, the
+auto proxy switches at the size thresholds and back, and two static
+tiles dropped from ~58% CPU (0.4.5) to ~0% (0.5.0) thanks to
+repeated-frame skipping. Building either platform now needs the Qt
+ShaderTools module (installed via aqtinstall on both machines).
 
 **Previous release: 0.4.5 (Windows + macOS) — complete on the release
 page.** All four downloads are attached to the v0.4.5 GitHub release
