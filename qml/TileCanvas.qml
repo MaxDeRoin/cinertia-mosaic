@@ -16,6 +16,10 @@ Rectangle {
     property int tileGap: 8
     // Small tiles switch to the NDI proxy stream automatically.
     property bool autoLowBw: true
+    // Show per-tile stream status dots.
+    property bool statusDots: true
+    // The app-wide idle-cursor hider; poked on any mouse movement here.
+    property var cursorGuard: null
     // Source names offered in each tile's "change source" list.
     property var availableSources: []
     // Windowless mode: dragging empty canvas moves the whole window.
@@ -255,6 +259,75 @@ Rectangle {
         }
     }
 
+    // Magnetic edges: candidate positions where the dragged tile's
+    // edges meet another tile's (adjacent or aligned); the nearest
+    // within 6 px wins per axis.
+    function magnetize(t, nx, ny) {
+        const eps = 6
+        let bestDx = eps + 1
+        let bestDy = eps + 1
+        let sx = nx
+        let sy = ny
+        for (let i = 0; i < tileRepeater.count; i++) {
+            const o = tileRepeater.itemAt(i)
+            if (!o || o === t)
+                continue
+            if (ny < o.y + o.height && ny + t.height > o.y) {
+                const xc = [o.x + o.width, o.x - t.width,
+                            o.x, o.x + o.width - t.width]
+                for (const c of xc) {
+                    const d = Math.abs(c - nx)
+                    if (d <= eps && d < bestDx) {
+                        bestDx = d
+                        sx = c
+                    }
+                }
+            }
+            if (nx < o.x + o.width && nx + t.width > o.x) {
+                const yc = [o.y + o.height, o.y - t.height,
+                            o.y, o.y + o.height - t.height]
+                for (const c of yc) {
+                    const d = Math.abs(c - ny)
+                    if (d <= eps && d < bestDy) {
+                        bestDy = d
+                        sy = c
+                    }
+                }
+            }
+        }
+        return Qt.point(sx, sy)
+    }
+
+    // Tiles touching edge-to-edge (within 2 px, overlapping along the
+    // shared edge) form a cluster; Alt+drag moves the whole cluster.
+    function connectedGroup(start) {
+        const eps = 2
+        const group = [start]
+        function touching(a, b) {
+            const hOverlap = a.y < b.y + b.height - eps
+                && a.y + a.height > b.y + eps
+            const vOverlap = a.x < b.x + b.width - eps
+                && a.x + a.width > b.x + eps
+            if (hOverlap && (Math.abs(a.x + a.width - b.x) <= eps
+                             || Math.abs(b.x + b.width - a.x) <= eps))
+                return true
+            if (vOverlap && (Math.abs(a.y + a.height - b.y) <= eps
+                             || Math.abs(b.y + b.height - a.y) <= eps))
+                return true
+            return false
+        }
+        for (let scan = 0; scan < group.length; scan++) {
+            for (let i = 0; i < tileRepeater.count; i++) {
+                const it = tileRepeater.itemAt(i)
+                if (!it || group.indexOf(it) !== -1)
+                    continue
+                if (touching(group[scan], it))
+                    group.push(it)
+            }
+        }
+        return group
+    }
+
     function closeTilePopups() {
         for (let i = 0; i < tileRepeater.count; i++) {
             const t = tileRepeater.itemAt(i)
@@ -354,6 +427,8 @@ Rectangle {
 
     HoverHandler {
         onPointChanged: {
+            if (canvas.cursorGuard)
+                canvas.cursorGuard.poke()
             canvas.mouseActivity(point.position)
             canvas.updateHoverTile(point.position)
         }
@@ -448,6 +523,8 @@ Rectangle {
                 wheelRotate: canvas.wheelRotate
                 globalShowName: canvas.globalShowName
                 autoLowBw: canvas.autoLowBw
+                showStatusDot: canvas.statusDots
+                canvasItem: canvas
                 availableSources: canvas.availableSources
                 gridSize: 16
                 selected: canvas.selectedTile === this

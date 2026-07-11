@@ -36,6 +36,11 @@ Item {
     property bool globalShowName: true
     // From settings: small tiles auto-switch to the NDI proxy stream.
     property bool autoLowBw: true
+    // From settings: show the stream status dot (red/yellow) when the
+    // source is down or stalling.
+    property bool showStatusDot: true
+    // The owning canvas — provides edge magnetism and group lookup.
+    property Item canvasItem: null
     // Custom label (e.g. "CAM 1 — STAGE LEFT"); empty = show source name.
     property string customName: ""
     // All discovered sources — offered in the ⋯ menu so the tile can be
@@ -102,22 +107,55 @@ Item {
             // there); a press anywhere else counts as clicking off them.
             property bool closesPopups: true
             property point pressPos
+            // Alt+drag: the tile and every tile touching it move as one
+            // group, so aligned tiles stay aligned.
+            property var group: []
             onPressed: mouse => {
                 tile.selectRequested()
                 if (closesPopups)
                     tile.closePopups()
                 pressPos = Qt.point(mouse.x, mouse.y)
+                group = (mouse.modifiers & Qt.AltModifier) && tile.canvasItem
+                    ? tile.canvasItem.connectedGroup(tile) : []
             }
             onPositionChanged: mouse => {
                 if (!pressed)
                     return
-                const doSnap = tile.snapEnabled || (mouse.modifiers & Qt.ControlModifier)
-                tile.snapDragActive = doSnap
                 let nx = tile.x + mouse.x - pressPos.x
                 let ny = tile.y + mouse.y - pressPos.y
+                if (group.length > 1) {
+                    // Group move: raw delta, clamped so the whole cluster
+                    // stays on the canvas.
+                    tile.snapDragActive = false
+                    let dx = nx - tile.x
+                    let dy = ny - tile.y
+                    let minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9
+                    for (const t of group) {
+                        minX = Math.min(minX, t.x)
+                        minY = Math.min(minY, t.y)
+                        maxX = Math.max(maxX, t.x + t.width)
+                        maxY = Math.max(maxY, t.y + t.height)
+                    }
+                    dx = Math.max(-minX, Math.min(dx, tile.parent.width - maxX))
+                    dy = Math.max(-minY, Math.min(dy, tile.parent.height - maxY))
+                    for (const t of group) {
+                        t.x += dx
+                        t.y += dy
+                    }
+                    return
+                }
+                const doSnap = tile.snapEnabled || (mouse.modifiers & Qt.ControlModifier)
+                tile.snapDragActive = doSnap
                 if (doSnap) {
                     nx = tile.snap(nx)
                     ny = tile.snap(ny)
+                }
+                // Magnetic edges: stick to nearby tile edges so neighbors
+                // line up seamlessly (beats the grid when both are close).
+                if (tile.canvasItem) {
+                    const m = tile.canvasItem.magnetize(tile, nx, ny)
+                    nx = m.x
+                    ny = m.y
                 }
                 tile.x = Math.max(0, Math.min(nx, tile.parent.width - tile.width))
                 tile.y = Math.max(0, Math.min(ny, tile.parent.height - tile.height))
@@ -206,6 +244,21 @@ Item {
 
             MeterBar { height: parent.height; level: video.audioLeft }
             MeterBar { height: parent.height; level: video.audioRight }
+        }
+
+        // Stream status indicator (top-left): red = not receiving,
+        // yellow = frames stalling. Hidden while the stream is healthy.
+        Rectangle {
+            visible: tile.showStatusDot && video.health > 0
+            anchors.top: parent.top
+            anchors.left: parent.left
+            anchors.margins: 8
+            width: 10
+            height: 10
+            radius: 5
+            color: video.health === 2 ? "#ff4040" : "#ffd040"
+            border.width: 1
+            border.color: "#00000080"
         }
 
 

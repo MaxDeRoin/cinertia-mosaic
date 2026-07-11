@@ -30,6 +30,8 @@ Window {
     property bool showTileNames: true
     property int tileGap: 8
     property bool autoLowBw: true
+    property bool statusDots: true
+    property var cursorGuard: null
     property var availableSources: []
 
     readonly property alias canvas: tc
@@ -128,6 +130,8 @@ Window {
         globalShowName: out.showTileNames
         tileGap: out.tileGap
         autoLowBw: out.autoLowBw
+        statusDots: out.statusDots
+        cursorGuard: out.cursorGuard
         availableSources: out.availableSources
         // Windowless has no title bar — dragging the canvas background
         // moves the window, same as the main window.

@@ -89,6 +89,13 @@ Hover a tile to reveal its **header**: the name, then
 ⟲ ⟳ (rotate 90°), Crop, Uncrop (shown only while a crop is active),
 Fit, Size, ⋯ (options), ✕ (close).
 
+### Stream status indicator
+A small dot appears in a tile's top-left corner when its stream has a
+problem: **red** = not receiving (source offline, or the picture has
+been frozen for more than 3 seconds), **yellow** = frames are stalling.
+No dot means the stream is healthy. Turn the indicators on or off with
+**Settings -> Stream status indicators**.
+
 ### Selecting
 Click a tile to select it — it gets a blue border and comes to the
 front. The border fades after a few seconds of mouse inactivity and
@@ -103,6 +110,11 @@ tile. Click empty canvas to deselect.
 - **Snap to grid:** hold **Ctrl** while dragging, or turn on **Snap**
   in the Layouts section. The grid appears on the canvas only while you
   drag with snapping active.
+- **Magnetic edges:** while dragging, a tile's edges stick to nearby
+  tile edges (within a few pixels) — adjacent or aligned — so tiles
+  line up seamlessly without the grid.
+- **Move tiles together:** hold **Alt** and drag a tile to move it and
+  every tile touching it as one group — lined-up tiles stay lined up.
 - **Size** button: type an exact width × height in pixels.
 
 ### Looking around inside a tile (all GPU, instant)
@@ -260,6 +272,8 @@ program/preview wall on the stage-left TV.
 | Show tile names | Master switch for all tile labels |
 | Allow duplicate sources | Off (default): sidebar clicks toggle a source on/off. On: each click adds another copy of the source |
 | Auto low bandwidth for small tiles | On (default): tiles rendered at proxy size or smaller automatically receive the lighter NDI® proxy stream, reducing CPU and network load. The tile reconnects briefly when it crosses the size threshold |
+| Stream status indicators | On (default): a red/yellow dot on a tile whose stream is down or stalling |
+| Hide mouse when idle | On (default): the mouse cursor disappears over Mosaic after 3 seconds without movement and returns when moved |
 | Keep canvases when switching profiles | On (default): canvases not saved in the selected profile stay open unchanged. Off: they close |
 | Keep display awake | Stops Windows blanking the screen (unattended operation) |
 | Remote control + port | The Companion/Stream Deck TCP interface |

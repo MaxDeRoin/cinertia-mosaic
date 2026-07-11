@@ -15,6 +15,8 @@ ApplicationWindow {
     NdiFinder { id: finder }
     Storage { id: storage }
     PowerGuard { keepAwake: window.neverSleep }
+    // Hides the mouse over Mosaic's windows after 3 s of no movement.
+    CursorGuard { id: cursorGuard; enabled: window.hideCursor }
 
     RemoteControl {
         id: remote
@@ -93,6 +95,10 @@ ApplicationWindow {
     // CPU/network savings); the per-tile Low bandwidth toggle still
     // forces it regardless of size.
     property bool autoLowBw: true
+    // Per-tile stream status dots (red = down, yellow = stalling).
+    property bool statusDots: true
+    // Hide the mouse cursor over the app after a few idle seconds.
+    property bool hideCursor: true
     // Off (default): sidebar clicks toggle a source on/off the canvas.
     // On: every click adds another tile of the source, so one shot can be
     // cropped to several regions.
@@ -436,6 +442,8 @@ ApplicationWindow {
             showTileNames: showTileNames,
             allowDuplicates: allowDuplicates,
             autoLowBw: autoLowBw,
+            statusDots: statusDots,
+            hideCursor: hideCursor,
             neverSleep: neverSleep,
             keepCanvases: keepCanvases,
             remoteEnabled: remoteEnabled,
@@ -465,6 +473,8 @@ ApplicationWindow {
                 showTileNames = s.showTileNames !== false
                 allowDuplicates = s.allowDuplicates === true
                 autoLowBw = s.autoLowBw !== false
+                statusDots = s.statusDots !== false
+                hideCursor = s.hideCursor !== false
                 neverSleep = s.neverSleep === true
                 keepCanvases = s.keepCanvases !== false
                 remoteEnabled = s.remoteEnabled === true
@@ -890,6 +900,8 @@ ApplicationWindow {
             globalShowName: window.showTileNames
             tileGap: window.tileGap
             autoLowBw: window.autoLowBw
+            statusDots: window.statusDots
+            cursorGuard: cursorGuard
             availableSources: finder.sources
             moveWindowOnDrag: window.displayMode === 2
             focusTarget: keyCatcher
@@ -921,6 +933,8 @@ ApplicationWindow {
             showTileNames: window.showTileNames
             tileGap: window.tileGap
             autoLowBw: window.autoLowBw
+            statusDots: window.statusDots
+            cursorGuard: cursorGuard
             availableSources: finder.sources
             appQuitting: window.quitting
             onCloseRequested: window.removeOutput(index)
@@ -1181,6 +1195,16 @@ ApplicationWindow {
                 label: "Allow duplicate sources"
                 checked: window.allowDuplicates
                 onToggled: window.allowDuplicates = !window.allowDuplicates
+            }
+            CheckRow {
+                label: "Stream status indicators"
+                checked: window.statusDots
+                onToggled: window.statusDots = !window.statusDots
+            }
+            CheckRow {
+                label: "Hide mouse when idle"
+                checked: window.hideCursor
+                onToggled: window.hideCursor = !window.hideCursor
             }
             CheckRow {
                 label: "Auto low bandwidth for small tiles"

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QElapsedTimer>
 #include <QImage>
 #include <QPointF>
 #include <QQuickItem>
@@ -26,11 +27,15 @@ signals:
     // width/2 (converted to RGB on the GPU); 0: a regular BGRA image.
     void frameReady(const QImage &frame, int uyvyWidth);
     void statusChanged(const QString &status);
+    // 0 = receiving, 1 = stalling (no new frame for >1 s), 2 = down
+    // (no connection, or frozen for >3 s).
+    void healthChanged(int health);
     void audioLevels(qreal left, qreal right);
 
 private:
     void poll();
     void pollDirect(); // low-latency path: no frame sync buffering
+    void updateHealth();
     void pollAudio();
     void updateLevels(float peakL, float peakR);
     void setStatus(const QString &status);
@@ -42,6 +47,12 @@ private:
     // polled faster than most sources produce frames, so repeats are
     // detected here and never copied or uploaded again.
     qint64 m_lastTimestamp = 0;
+    // Stream health bookkeeping (see healthChanged).
+    QElapsedTimer m_aliveClock;
+    qint64 m_lastFrameMs = 0;     // 0 = nothing received yet
+    qint64 m_lastConnCheckMs = -10000;
+    int m_connections = 0;
+    int m_health = -1;
     QString m_status;
     QString m_streamInfo;
     bool m_captureAudio = false;
@@ -65,6 +76,9 @@ class NdiVideoItem : public QQuickItem
     Q_PROPERTY(QString status READ status NOTIFY statusChanged)
     Q_PROPERTY(QSize videoSize READ videoSize NOTIFY videoSizeChanged)
     Q_PROPERTY(qreal zoomLevel READ zoomLevel NOTIFY viewChanged)
+    // Stream health for the tile's status indicator: 0 = receiving,
+    // 1 = stalling, 2 = down (no connection / frozen / still connecting).
+    Q_PROPERTY(int health READ health NOTIFY healthChanged)
     Q_PROPERTY(qreal viewRotation READ viewRotation NOTIFY viewChanged)
     Q_PROPERTY(bool cropped READ cropped NOTIFY viewChanged)
     // Alt+scroll rotation. On by default; the future settings menu gets a
@@ -91,6 +105,7 @@ public:
     QString sourceName() const { return m_sourceName; }
     void setSourceName(const QString &name);
     QString status() const { return m_status; }
+    int health() const { return m_health; }
     QSize videoSize() const { return m_videoSize; }
     qreal zoomLevel() const { return m_zoom; }
     qreal viewRotation() const { return m_rotation; }
@@ -121,6 +136,7 @@ public:
 signals:
     void sourceNameChanged();
     void statusChanged();
+    void healthChanged();
     void viewChanged();
     void wheelRotateEnabledChanged();
     void videoSizeChanged();
@@ -143,6 +159,7 @@ protected:
 private:
     void onFrame(const QImage &frame, int uyvyWidth);
     void onStatus(const QString &status);
+    void onHealth(int health);
     void onAudioLevels(qreal left, qreal right);
     QRectF fitRect() const;          // letterboxed quad at zoom 1
     QTransform viewTransform() const;
@@ -157,6 +174,7 @@ private:
     NdiReceiveWorker *m_worker = nullptr;
     QString m_sourceName;
     QString m_status;
+    int m_health = 2; // down until the first frame arrives
     QImage m_pendingFrame;
     int m_pendingUyvyWidth = 0;  // 0 = BGRA frame
     bool m_nodeIsUyvy = false;   // which node type the scene graph holds

@@ -85,6 +85,8 @@ qt_add_qml_module(Mosaic
         src/ndi/NdiVideoItem.cpp
         src/ndi/UyvyMaterial.h
         src/ndi/UyvyMaterial.cpp
+        src/CursorGuard.h
+        src/CursorGuard.cpp
 )
 
 # UYVY→RGB conversion shaders, compiled by Qt's shader tools for every

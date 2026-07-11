@@ -6,6 +6,25 @@ Vizrt NDI AB.
 
 ---
 
+## Unreleased
+
+### Monitoring
+- **Stream status indicators (new setting, on by default):** a small
+  dot in a tile's top-left corner shows stream problems — red when the
+  source is not being received (offline, or frozen for more than 3
+  seconds), yellow when frames are stalling. Hidden while healthy.
+
+### Interface
+- **Hide mouse when idle (new setting, on by default):** the cursor
+  disappears over Mosaic windows after 3 seconds without movement, so
+  it never sits on top of video. It returns the moment the mouse moves.
+- **Magnetic tile edges:** while dragging, a tile's edges stick to
+  neighboring tiles' edges for seamless alignment without the grid.
+- **Move tiles together:** Alt+drag moves a tile and every tile
+  touching it as one group.
+
+---
+
 ## 0.5.0 — 2026-07-10
 
 ### Performance

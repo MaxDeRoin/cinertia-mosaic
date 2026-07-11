@@ -84,6 +84,11 @@ void NdiReceiveWorker::start(const QString &sourceName, bool lowBandwidth,
         return;
     }
 
+    m_aliveClock.start();
+    m_lastFrameMs = 0;
+    m_lastConnCheckMs = -10000;
+    m_health = -1;
+
     // Normal mode: frame sync resamples the source clock for smooth
     // timing, polled at ~60 Hz. Low latency: no frame sync — poll the
     // receiver directly every 2 ms and show frames the moment they land.
@@ -131,6 +136,8 @@ void NdiReceiveWorker::setCaptureAudio(bool enabled)
 
 void NdiReceiveWorker::poll()
 {
+    updateHealth();
+
     if (m_lowLatency) {
         pollDirect();
         return;
@@ -165,6 +172,7 @@ void NdiReceiveWorker::poll()
         return;
     }
     m_lastTimestamp = frame.timestamp;
+    m_lastFrameMs = m_aliveClock.elapsed();
 
     int uyvyWidth = 0;
     const QImage wrapped = wrapFrame(frame, &uyvyWidth);
@@ -197,6 +205,34 @@ void NdiReceiveWorker::poll()
     }
 }
 
+// Health: red when the receiver has no connection, nothing has ever
+// arrived, or the feed is frozen; yellow when frames are stalling. A
+// frozen picture with a live connection still counts as a problem —
+// that is exactly the failure a multiviewer must show.
+void NdiReceiveWorker::updateHealth()
+{
+    if (!m_recv || !m_aliveClock.isValid())
+        return;
+    const qint64 now = m_aliveClock.elapsed();
+    if (now - m_lastConnCheckMs > 1000) {
+        m_lastConnCheckMs = now;
+        m_connections = NDIlib_recv_get_no_connections(
+            static_cast<NDIlib_recv_instance_t>(m_recv));
+    }
+    int health;
+    const qint64 sinceFrame = now - m_lastFrameMs;
+    if (m_connections <= 0 || m_lastFrameMs == 0 || sinceFrame > 3000)
+        health = 2;
+    else if (sinceFrame > 1000)
+        health = 1;
+    else
+        health = 0;
+    if (health != m_health) {
+        m_health = health;
+        emit healthChanged(health);
+    }
+}
+
 void NdiReceiveWorker::pollDirect()
 {
     if (!m_recv)
@@ -212,6 +248,7 @@ void NdiReceiveWorker::pollDirect()
             recv, &video, m_captureAudio ? &audio : nullptr, nullptr, 0);
 
         if (type == NDIlib_frame_type_video) {
+            m_lastFrameMs = m_aliveClock.elapsed();
             int uyvyWidth = 0;
             const QImage wrapped = wrapFrame(video, &uyvyWidth);
             emit frameReady(wrapped, uyvyWidth);
@@ -326,6 +363,8 @@ NdiVideoItem::NdiVideoItem()
             this, &NdiVideoItem::onFrame, Qt::QueuedConnection);
     connect(m_worker, &NdiReceiveWorker::statusChanged,
             this, &NdiVideoItem::onStatus, Qt::QueuedConnection);
+    connect(m_worker, &NdiReceiveWorker::healthChanged,
+            this, &NdiVideoItem::onHealth, Qt::QueuedConnection);
     connect(m_worker, &NdiReceiveWorker::audioLevels,
             this, &NdiVideoItem::onAudioLevels, Qt::QueuedConnection);
     m_thread.start();
@@ -690,6 +729,14 @@ void NdiVideoItem::onFrame(const QImage &frame, int uyvyWidth)
         emit videoSizeChanged();
     }
     update();
+}
+
+void NdiVideoItem::onHealth(int health)
+{
+    if (health == m_health)
+        return;
+    m_health = health;
+    emit healthChanged();
 }
 
 void NdiVideoItem::onStatus(const QString &status)
