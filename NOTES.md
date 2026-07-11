@@ -12,14 +12,32 @@ approval from the NDI team, so everything internal uses this codename for now.
 Easy to rename later.
 
 ## Current status
-**Current release: 0.5.5 — show-day usability.** Stream status
-indicator dots (red = down/frozen, yellow = stalling), idle cursor
-hiding over the canvas, Alt+drag group moves, Alt+resize linked
-borders (shared borders and group outer edges), the 2+1 layout preset,
-a scrolling settings panel, and Companion module 0.1.1 (adds the 2+1
-preset). Windows installer, guide PDF and module are on the v0.5.5
-GitHub release; the macOS dmg gets attached from the Mac, which then
-marks v0.5.5 as latest.
+**Current release: 0.5.5 — show-day usability, signed off on macOS.**
+Stream status indicator dots (a red dot appears when a tile loses its
+live connection to the source — sender closed or gone from the network;
+static pictures such as stills and test patterns stay dotless because
+they are still connected), idle cursor hiding over the canvas, Alt+drag
+group moves, Alt+resize linked borders (shared borders and group outer
+edges), the 2+1 layout preset, a scrolling settings panel, and
+Companion module 0.1.1 (adds the 2+1 preset). All four downloads are on
+the v0.5.5 GitHub release (`Mosaic-Setup-0.5.5.exe`, `Mosaic-0.5.5.dmg`,
+the user guide PDF, the Companion module), and v0.5.5 is marked latest.
+The Mac build was verified against live sources 2026-07-11 and signed
+off by Max: killing a sender turns its tile's dot red within a few
+seconds and it clears when the source returns while a static source
+stays dotless, the cursor hides over the canvas only (never the
+sidebar), Alt+drag moves touching tiles as a group, Alt+resize moves a
+shared border on both sides and a group's outer edge to one line, the
+2+1 preset lays two tiles over a full-width row, and the settings panel
+scrolls in a small window.
+
+The connection-based status dot replaced the original motion-based
+detection, which wrongly flagged legitimately static pictures as down —
+a fix made during Mac testing. It lives in shared code
+(`src/ndi/NdiVideoItem.cpp`), so the `Mosaic-Setup-0.5.5.exe` already on
+the release predates it: rebuild the Windows installer on the PC (pull
+master, run `scripts/stage-deploy.ps1`, re-upload the exe with
+`--clobber`) so both platforms match.
 
 **Previous release: 0.5.0 — the performance release, complete on both
 platforms.** GPU pixel-format conversion, auto proxy for small tiles,

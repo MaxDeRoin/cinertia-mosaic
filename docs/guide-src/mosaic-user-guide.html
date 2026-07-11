@@ -175,7 +175,7 @@
         <tr><td>Pan while zoomed</td><td>Drag the picture</td></tr>
         <tr><td>Rotate freely</td><td><kbd>Alt</kbd> + scroll (2° steps), or use ⟲ ⟳ for 90°</td></tr>
         <tr><td>Crop</td><td>Header → <strong>Crop</strong>, drag a box over the region. Crops stack; <strong>Uncrop</strong> removes them</td></tr>
-        <tr><td>Stream status</td><td>A dot appears top-left when a stream has a problem: red = not receiving or frozen, yellow = stalling. No dot = healthy (Settings toggle)</td></tr>
+        <tr><td>Stream status</td><td>A red dot appears top-left when a tile loses its live connection to the source (sender closed or off the network). No dot = connected, including static pictures (Settings toggle)</td></tr>
         <tr><td>Move touching tiles together</td><td><kbd>Alt</kbd>+drag a tile — every tile touching it moves as one group</td></tr>
         <tr><td>Resize touching tiles together</td><td><kbd>Alt</kbd>+drag an edge — a shared border moves for every tile on it; an outer edge moves the group's matching edges to the same line</td></tr>
         <tr><td>Reset the view</td><td>Double-click (zoom/pan) or header → <strong>Fit</strong>. Uncropped: resets the view and reshapes the tile to the video. Cropped: keeps the crop and the tile's size, refitting the cropped region inside the tile</td></tr>
@@ -245,7 +245,7 @@
         <tr><td>Rotate with Alt+scroll</td><td>Enable/disable wheel rotation</td></tr>
         <tr><td>Show tile names</td><td>Master switch for all tile labels</td></tr>
         <tr><td>Allow duplicate sources</td><td>Off: clicks toggle a source on/off. On: each click adds another copy</td></tr>
-        <tr><td>Stream status indicators</td><td>On (default): red/yellow dot on tiles whose stream is down or stalling</td></tr>
+        <tr><td>Stream status indicators</td><td>On (default): red dot on tiles that have lost their live connection to the source</td></tr>
         <tr><td>Hide mouse when idle</td><td>On (default): the cursor disappears over the canvas after 3 s without movement</td></tr>
         <tr><td>Auto low bandwidth for small tiles</td><td>On (default): small tiles automatically receive the lighter NDI® proxy stream — big CPU/network savings on dense grids</td></tr>
         <tr><td>Keep canvases when switching profiles</td><td>On (default): canvases not saved in the selected profile stay open unchanged. Off: they close</td></tr>
@@ -296,7 +296,7 @@
     <h2>What's new</h2>
     <h3>0.5.5 — July 2026</h3>
     <ul>
-        <li><strong>Stream status indicators</strong> (new setting, on by default): a red/yellow dot on tiles whose stream is down, frozen or stalling.</li>
+        <li><strong>Stream status indicators</strong> (new setting, on by default): a red dot on tiles that have lost their live connection to the source (sender closed or gone from the network); static pictures stay dotless.</li>
         <li><strong>Hide mouse when idle</strong> (new setting, on by default): the cursor disappears over the canvas after 3 seconds without movement.</li>
         <li><strong>Alt as the group key:</strong> Alt+drag moves touching tiles as one group; Alt+resize moves a shared border for every tile on it, or an outer edge for the whole group.</li>
         <li><strong>2+1 layout preset:</strong> two tiles on top, one large row below — also remote-controllable (LAYOUT 2+1), with a matching Companion module update (0.1.1).</li>

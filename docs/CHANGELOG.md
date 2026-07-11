@@ -10,9 +10,11 @@ Vizrt NDI AB.
 
 ### Monitoring
 - **Stream status indicators (new setting, on by default):** a small
-  dot in a tile's top-left corner shows stream problems — red when the
-  source is not being received (offline, or frozen for more than 3
-  seconds), yellow when frames are stalling. Hidden while healthy.
+  red dot in a tile's top-left corner appears when the tile loses its
+  live connection to the source — the sender is closed or gone from the
+  network. A connected source shows no dot, including still images,
+  slides and other static pictures (they send no new frames yet are
+  perfectly alive).
 
 ### Interface
 - **2+1 layout preset:** two tiles side by side on top, the remaining

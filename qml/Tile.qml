@@ -244,10 +244,10 @@ Item {
             MeterBar { height: parent.height; level: video.audioRight }
         }
 
-        // Stream status indicator: red = not receiving, yellow =
-        // frames stalling. Hidden while healthy. Sits below the hover
-        // header (which would otherwise cover it) and above every other
-        // overlay.
+        // Stream status indicator: red = no live connection to the source
+        // (killed or gone from the network). Hidden while connected, so a
+        // static picture shows nothing. Sits below the hover header (which
+        // would otherwise cover it) and above every other overlay.
         Rectangle {
             visible: tile.showStatusDot && video.health > 0
             anchors.top: parent.top

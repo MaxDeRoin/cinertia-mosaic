@@ -205,10 +205,15 @@ void NdiReceiveWorker::poll()
     }
 }
 
-// Health: red when the receiver has no connection, nothing has ever
-// arrived, or the feed is frozen; yellow when frames are stalling. A
-// frozen picture with a live connection still counts as a problem —
-// that is exactly the failure a multiviewer must show.
+// Health is tied to the NDI connection, not to picture motion. A static
+// source — a still, a slide, a test pattern, an idle on-change screen
+// capture — sends no new frames by design yet is perfectly alive, so frame
+// recency cannot be used as a liveness signal: it would flag every static
+// picture as down. Red = the receiver has no connection to a sender (source
+// killed or gone from the network) or nothing has arrived yet; otherwise
+// the stream is healthy and shows no dot. A sender that hangs while holding
+// its connection open is indistinguishable from a legitimate still and is
+// left healthy on purpose.
 void NdiReceiveWorker::updateHealth()
 {
     if (!m_recv || !m_aliveClock.isValid())
@@ -219,14 +224,7 @@ void NdiReceiveWorker::updateHealth()
         m_connections = NDIlib_recv_get_no_connections(
             static_cast<NDIlib_recv_instance_t>(m_recv));
     }
-    int health;
-    const qint64 sinceFrame = now - m_lastFrameMs;
-    if (m_connections <= 0 || m_lastFrameMs == 0 || sinceFrame > 3000)
-        health = 2;
-    else if (sinceFrame > 1000)
-        health = 1;
-    else
-        health = 0;
+    const int health = (m_connections <= 0 || m_lastFrameMs == 0) ? 2 : 0;
     if (health != m_health) {
         m_health = health;
         emit healthChanged(health);

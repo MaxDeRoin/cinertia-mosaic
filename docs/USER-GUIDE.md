@@ -90,11 +90,12 @@ Hover a tile to reveal its **header**: the name, then
 Fit, Size, ⋯ (options), ✕ (close).
 
 ### Stream status indicator
-A small dot appears in a tile's top-left corner when its stream has a
-problem: **red** = not receiving (source offline, or the picture has
-been frozen for more than 3 seconds), **yellow** = frames are stalling.
-No dot means the stream is healthy. Turn the indicators on or off with
-**Settings -> Stream status indicators**.
+A small **red** dot appears in a tile's top-left corner when the tile
+loses its live connection to the source — the sender has been closed or
+has dropped off the network. No dot means the source is connected and
+healthy; a still image, slide or other static picture stays dotless
+because it is connected even though it sends no new frames. Turn the
+indicators on or off with **Settings -> Stream status indicators**.
 
 ### Selecting
 Click a tile to select it — it gets a blue border and comes to the
@@ -279,7 +280,7 @@ program/preview wall on the stage-left TV.
 | Show tile names | Master switch for all tile labels |
 | Allow duplicate sources | Off (default): sidebar clicks toggle a source on/off. On: each click adds another copy of the source |
 | Auto low bandwidth for small tiles | On (default): tiles rendered at proxy size or smaller automatically receive the lighter NDI® proxy stream, reducing CPU and network load. The tile reconnects briefly when it crosses the size threshold |
-| Stream status indicators | On (default): a red/yellow dot on a tile whose stream is down or stalling |
+| Stream status indicators | On (default): a red dot on a tile that has lost its live connection to the source |
 | Hide mouse when idle | On (default): the mouse cursor disappears over Mosaic after 3 seconds without movement and returns when moved |
 | Keep canvases when switching profiles | On (default): canvases not saved in the selected profile stay open unchanged. Off: they close |
 | Keep display awake | Stops Windows blanking the screen (unattended operation) |

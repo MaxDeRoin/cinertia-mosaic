@@ -27,8 +27,9 @@ signals:
     // width/2 (converted to RGB on the GPU); 0: a regular BGRA image.
     void frameReady(const QImage &frame, int uyvyWidth);
     void statusChanged(const QString &status);
-    // 0 = receiving, 1 = stalling (no new frame for >1 s), 2 = down
-    // (no connection, or frozen for >3 s).
+    // 0 = healthy (connected to a sender), 2 = down (no connection, or
+    // nothing received yet). Tied to the connection, not picture motion, so
+    // a static source stays healthy. (1 = stalling is no longer emitted.)
     void healthChanged(int health);
     void audioLevels(qreal left, qreal right);
 
@@ -76,8 +77,9 @@ class NdiVideoItem : public QQuickItem
     Q_PROPERTY(QString status READ status NOTIFY statusChanged)
     Q_PROPERTY(QSize videoSize READ videoSize NOTIFY videoSizeChanged)
     Q_PROPERTY(qreal zoomLevel READ zoomLevel NOTIFY viewChanged)
-    // Stream health for the tile's status indicator: 0 = receiving,
-    // 1 = stalling, 2 = down (no connection / frozen / still connecting).
+    // Stream health for the tile's status indicator: 0 = healthy
+    // (connected), 2 = down (no connection / still connecting). Based on the
+    // NDI connection, so a static picture stays healthy.
     Q_PROPERTY(int health READ health NOTIFY healthChanged)
     Q_PROPERTY(qreal viewRotation READ viewRotation NOTIFY viewChanged)
     Q_PROPERTY(bool cropped READ cropped NOTIFY viewChanged)
