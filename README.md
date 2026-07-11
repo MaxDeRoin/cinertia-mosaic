@@ -10,7 +10,7 @@ Discover every NDI® source on your network and arrange them as free-form video
 tiles — with GPU zoom / pan / crop on every tile, instantly switchable
 profiles, multi-monitor output, and Stream Deck remote control.
 
-[**⬇ Download for Windows**](https://github.com/TehBeef/cinertia-mosaic/releases/latest) · [**⬇ Download for macOS**](https://github.com/TehBeef/cinertia-mosaic/releases/latest) · [User Guide](docs/USER-GUIDE.md) · [Changelog](docs/CHANGELOG.md)
+[**⬇ Download for Windows**](https://github.com/MaxDeRoin/cinertia-mosaic/releases/latest) · [**⬇ Download for macOS**](https://github.com/MaxDeRoin/cinertia-mosaic/releases/latest) · [User Guide](docs/USER-GUIDE.md) · [Changelog](docs/CHANGELOG.md)
 
 <img src="docs/guide-src/img/fig-hero.png" width="850" alt="Mosaic showing a 1+side broadcast layout with four NDI sources">
 
@@ -44,8 +44,8 @@ profiles, multi-monitor output, and Stream Deck remote control.
 
 | | |
 |---|---|
-| **Windows 10/11** | Run `Mosaic-Setup-<version>.exe` from the [latest release](https://github.com/TehBeef/cinertia-mosaic/releases/latest). Allow network access when Windows Firewall asks. |
-| **macOS 12+** (Apple Silicon & Intel) | Open `Mosaic-<version>.dmg` from the [latest release](https://github.com/TehBeef/cinertia-mosaic/releases/latest), drag **Mosaic** to **Applications**. First launch: **right-click → Open**, then **Allow** the Local Network permission (that's NDI discovery). |
+| **Windows 10/11** | Run `Mosaic-Setup-<version>.exe` from the [latest release](https://github.com/MaxDeRoin/cinertia-mosaic/releases/latest). Allow network access when Windows Firewall asks. |
+| **macOS 12+** (Apple Silicon & Intel) | Open `Mosaic-<version>.dmg` from the [latest release](https://github.com/MaxDeRoin/cinertia-mosaic/releases/latest), drag **Mosaic** to **Applications**. First launch: **right-click → Open**, then **Allow** the Local Network permission (that's NDI discovery). |
 
 Full details in the [User Guide](docs/USER-GUIDE.md).
 

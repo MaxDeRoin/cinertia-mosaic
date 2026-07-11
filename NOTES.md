@@ -222,7 +222,7 @@ Homebrew are on the internal drive (they were already there).
 - **Repo front page:** `README.md` (on master and macos-port) — logo, feature
   list, screenshots from `docs/guide-src/img/`, download + install for both
   platforms.
-- **Website:** https://tehbeef.github.io/cinertia-mosaic/ — GitHub Pages,
+- **Website:** https://maxderoin.github.io/cinertia-mosaic/ — GitHub Pages,
   served from the `gh-pages` branch (a single `index.html` + `img/`; edit
   that branch to change the site). Set as the repo homepage.
 - **Downloads:** GitHub Releases. `v0.4.0` carries `Mosaic-0.4.0.dmg` (the
