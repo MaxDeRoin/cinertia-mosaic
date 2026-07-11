@@ -12,7 +12,16 @@ approval from the NDI team, so everything internal uses this codename for now.
 Easy to rename later.
 
 ## Current status
-**Current release: 0.5.0 — the performance release, complete on both
+**Current release: 0.5.5 — show-day usability.** Stream status
+indicator dots (red = down/frozen, yellow = stalling), idle cursor
+hiding over the canvas, Alt+drag group moves, Alt+resize linked
+borders (shared borders and group outer edges), the 2+1 layout preset,
+a scrolling settings panel, and Companion module 0.1.1 (adds the 2+1
+preset). Windows installer, guide PDF and module are on the v0.5.5
+GitHub release; the macOS dmg gets attached from the Mac, which then
+marks v0.5.5 as latest.
+
+**Previous release: 0.5.0 — the performance release, complete on both
 platforms.** GPU pixel-format conversion, auto proxy for small tiles,
 per-source poll rates, and repeated-frame skipping (see
 docs/CHANGELOG.md). All four downloads are on the v0.5.0 GitHub

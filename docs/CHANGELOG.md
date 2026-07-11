@@ -6,7 +6,7 @@ Vizrt NDI AB.
 
 ---
 
-## Unreleased
+## 0.5.5 — 2026-07-11
 
 ### Monitoring
 - **Stream status indicators (new setting, on by default):** a small

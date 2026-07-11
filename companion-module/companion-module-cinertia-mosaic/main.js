@@ -22,6 +22,7 @@ const LAYOUTS = [
     { id: '4x4', label: '4×4 grid' },
     { id: '1+side', label: '1 large + side column' },
     { id: '2+8', label: '2 large + rows of 4' },
+    { id: '2+1', label: '2 on top + full-width row' },
 ]
 
 const MODES = [
