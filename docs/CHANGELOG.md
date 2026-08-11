@@ -6,6 +6,17 @@ Vizrt NDI AB.
 
 ---
 
+## 0.6.7 — 2026-08-11
+
+### Diagnostics
+- **NDI diagnostic logging (temporary):** writes NDI discovery, network
+  interfaces, receiver connections and the NDI runtime's own messages to
+  `~/Library/Logs/Mosaic/ndi-diagnostic.log`, to investigate an NDI
+  discovery issue reported on macOS. No functional changes; the logging
+  is removed once the issue is resolved.
+
+---
+
 ## 0.6.6 — 2026-08-11
 
 ### Signage

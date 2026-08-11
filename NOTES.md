@@ -12,6 +12,21 @@ approval from the NDI team, so everything internal uses this codename for now.
 Easy to rename later.
 
 ## Current status
+**Diagnostic build: 0.6.7 — NDI logging.** Temporary build to chase a
+macOS bug where launching Mosaic can stop NDI working machine-wide until
+reboot (only with network sources — a local source never reproduces it,
+confirmed by watching NDI Video Monitor's connection stay up for 48s with
+Mosaic running). Ruled out: the bundled runtime (byte-identical to NDI's
+own free redistributable; the "Advanced/30-min" string is a harmless
+watermark) and any license/cap issue. Adds `src/DiagLog.h` +
+instrumentation in `main.cpp` (stderr redirected to
+`~/Library/Logs/Mosaic/ndi-diagnostic.log`, plus NDI version and all
+network interfaces), `NdiFinder` (source list with IP:port on every
+change + heartbeat) and `NdiVideoItem` (receiver connects). Released as a
+GitHub pre-release for Max to run when it breaks in his real (network)
+setup; the log then points at the cause. Logging comes back out once the
+real fix lands.
+
 **In progress: 0.6.6 — output polish.** Adds a "Show tile controls"
 setting (on by default): off hides every tile's top control bar (drag
 handle, rotate/crop/fit/reset/close, ☰ menu) so an output/signage

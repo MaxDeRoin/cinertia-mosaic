@@ -1,6 +1,7 @@
 #include "NdiVideoItem.h"
 
 #include "UyvyMaterial.h"
+#include "../DiagLog.h"
 
 #include <QMouseEvent>
 #include <QQuickWindow>
@@ -79,8 +80,13 @@ void NdiReceiveWorker::start(const QString &sourceName, bool lowBandwidth,
     desc.allow_video_fields = false;
     desc.p_ndi_recv_name = nullptr;
 
+    diagLog(QStringLiteral("RECV connecting to \"%1\" (bandwidth=%2, lowLatency=%3)")
+                .arg(sourceName,
+                     lowBandwidth ? QStringLiteral("lowest") : QStringLiteral("highest"),
+                     lowLatency ? QStringLiteral("yes") : QStringLiteral("no")));
     m_recv = NDIlib_recv_create_v3(&desc);
     if (!m_recv) {
+        diagLog(QStringLiteral("RECV create FAILED for \"%1\"").arg(sourceName));
         setStatus(QStringLiteral("Failed to create receiver"));
         return;
     }
