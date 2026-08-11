@@ -31,6 +31,13 @@ Vizrt NDI AB.
   place — Enter saves, Esc cancels. The active profile stays active
   under its new name.
 
+### Fixes (macOS)
+- **Fullscreen to a chosen monitor now works.** Sending a canvas
+  fullscreen picks the display you select, and can be moved between
+  displays while fullscreen; the menu bar and Dock hide for a clean
+  edge-to-edge output and return when you exit. Exiting fullscreen
+  reliably restores the window instead of losing it.
+
 ---
 
 ## 0.6.0 — 2026-07-16

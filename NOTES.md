@@ -12,19 +12,43 @@ approval from the NDI team, so everything internal uses this codename for now.
 Easy to rename later.
 
 ## Current status
-**Current release: 0.6.5 — signage and layout files.** A "Show tile
-borders" setting (off = borderless tiles for clean signage output), a
-Windows-only "Start Mosaic when Windows starts" setting
-(`src/StartupLauncher.cpp`, per-user registry Run key; the checkbox is
-hidden on macOS until Login Items support exists), layout Export…/
-Import… under PROFILES (portable JSON via `Storage::saveUrl/loadUrl`
-and QtQuick.Dialogs file dialogs; imports join the profiles list named
-after the file and a spinner notice covers the load), and in-place
-profile renaming (✎ on hover). Windows installer, guide PDF and
-Companion module are on the v0.6.5 GitHub release; the macOS dmg gets
-attached from the Mac, which then marks v0.6.5 as latest. Note: v0.6.0
-was released on Windows only (the Mac skipped straight to 0.6.5); its
-release stays non-latest without a dmg.
+**Current release: 0.6.5 — signage and layout files. Complete on both
+platforms.** A "Show tile borders" setting (off = borderless tiles for
+clean signage output), a Windows-only "Start Mosaic when Windows starts"
+setting (`src/StartupLauncher.cpp`, per-user registry Run key; the
+checkbox is hidden on macOS until Login Items support exists), layout
+Export…/Import… under PROFILES (portable JSON via `Storage::saveUrl/
+loadUrl` and QtQuick.Dialogs file dialogs; imports join the profiles
+list named after the file and a spinner notice covers the load), and
+in-place profile renaming (✎ on hover). Windows installer, guide PDF and
+Companion module are on the v0.6.5 GitHub release; the macOS dmg
+(`Mosaic-0.6.5.dmg`) was built, verified against live sources, and
+signed off by Max 2026-08-11, then attached to v0.6.5, which is marked
+latest. The Mac caught up two releases at once (it was on 0.5.5), so
+0.6.0's macOS features were verified here too. Note: v0.6.0 was released
+on Windows only (the Mac skipped straight to 0.6.5); its release stays
+non-latest without a dmg.
+
+**A macOS fullscreen fix found during 0.6.5 Mac testing.** Sending a
+canvas fullscreen to a chosen monitor didn't work on macOS: it always
+went fullscreen on whatever display the window already sat on, and
+exiting fullscreen lost the window entirely. Two root causes, both
+macOS-only: (1) Qt's native fullscreen follows the display the window
+frame occupies, so setting `window.screen` alone never moved it; (2)
+native fullscreen drops each window into its own Space whose async
+transition swallowed the window on exit. Fix (in `applyMode`/
+`applyDisplayMode`, guarded by `Qt.platform.os`): on macOS fullscreen is
+now a borderless window sized to cover the target display — the window
+is positioned onto that display first, so it lands right, and exit is a
+plain resize back, so it never gets lost. A small AppKit helper
+(`src/MacWindow.mm`, no-op `MacWindow.cpp` elsewhere) hides the menu bar
+and Dock via `NSApplicationPresentationOptions` while any output is
+fullscreen (reference-counted, restored when the last one exits), so the
+cover is truly edge-to-edge. Fullscreen state is now tracked with an
+explicit `fsActive` flag instead of the window's async visibility, which
+keeps the saved windowed geometry correct on both platforms. The Windows
+path is unchanged (still native `Window.FullScreen`); both platforms'
+0.6.5 builds carry the shared code, Windows through its guarded branch.
 
 **Previous release: 0.6.0 — viewing polish and update notices.**
 Fit now respects rotation: it fits the picture at its current angle,

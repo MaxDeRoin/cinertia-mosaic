@@ -25,6 +25,8 @@ ApplicationWindow {
     // Start-with-Windows registration. The registry is the source of
     // truth, so the checkbox reads live state rather than session.json.
     StartupLauncher { id: startupLauncher }
+    // macOS only: lifts a fullscreen window above the menu bar (no-op elsewhere).
+    MacWindow { id: macWindow }
 
     // Layout export/import: the whole current setup (tiles and canvases,
     // like a profile) as a portable JSON file the user picks — for moving
@@ -319,22 +321,48 @@ ApplicationWindow {
     // can reset the size in the process — so remember the last windowed
     // geometry and put it back after every mode switch.
     property rect savedGeom: Qt.rect(0, 0, 0, 0)
+    // True while the window is showing fullscreen (native on Windows, a
+    // borderless screen-cover on macOS). Tracked explicitly because macOS
+    // fullscreen no longer sets Window.FullScreen visibility.
+    property bool fsActive: false
 
     function applyDisplayMode() {
         const onTop = alwaysOnTop ? Qt.WindowStaysOnTopHint : 0
-        if (window.visibility !== Window.FullScreen && window.width > 200)
+        // Remember the current windowed rectangle unless we're already
+        // showing fullscreen (whose geometry is the screen cover).
+        if (!fsActive && window.width > 200)
             savedGeom = Qt.rect(window.x, window.y, window.width, window.height)
 
         if (displayMode === 1) {
-            // Moving between monitors while already fullscreen needs a dip
-            // through windowed state or Windows keeps the old monitor.
-            if (window.visibility === Window.FullScreen)
-                window.visibility = Window.Windowed
-            window.flags = Qt.Window | onTop
             const screens = Qt.application.screens
-            window.screen = screens[Math.min(fsScreenIndex, screens.length - 1)]
-            window.visibility = Window.FullScreen
+            const target = screens[Math.min(fsScreenIndex, screens.length - 1)]
+            fsActive = true
+            if (Qt.platform.os === "windows") {
+                // Native fullscreen; dip through windowed so a monitor
+                // change actually moves displays.
+                if (window.visibility === Window.FullScreen)
+                    window.visibility = Window.Windowed
+                window.flags = Qt.Window | onTop
+                window.screen = target
+                window.visibility = Window.FullScreen
+            } else {
+                // macOS: cover the target screen with a borderless window
+                // instead of Qt's native fullscreen. Native fullscreen puts
+                // each window in its own Space, whose async transition lands
+                // on the wrong monitor and loses the window on exit.
+                window.screen = target
+                window.flags = Qt.Window | Qt.FramelessWindowHint | onTop
+                window.x = target.virtualX
+                window.y = target.virtualY
+                window.width = target.width
+                window.height = target.height
+                window.visibility = Window.Windowed
+                window.visible = true
+                window.raise()
+                macWindow.setCoversMenuBar(window, true)
+            }
         } else {
+            fsActive = false
             window.visibility = Window.Windowed
             window.flags = displayMode === 2
                 ? Qt.Window | Qt.FramelessWindowHint | onTop
@@ -346,6 +374,10 @@ ApplicationWindow {
                 window.height = savedGeom.height
             }
             window.visible = true
+            if (Qt.platform.os !== "windows") {
+                macWindow.setCoversMenuBar(window, false)
+                window.raise()
+            }
         }
     }
 

@@ -7,6 +7,14 @@ project(Mosaic VERSION 0.6.5 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# macOS needs Objective-C++ for the AppKit window-level helper (MacWindow.mm).
+if(APPLE)
+    enable_language(OBJCXX)
+    set(MOSAIC_PLATFORM_WINDOW src/MacWindow.mm)
+else()
+    set(MOSAIC_PLATFORM_WINDOW src/MacWindow.cpp)
+endif()
+
 find_package(Qt6 6.5 REQUIRED COMPONENTS Quick Network ShaderTools)
 
 qt_standard_project_setup(REQUIRES 6.5)
@@ -91,6 +99,8 @@ qt_add_qml_module(Mosaic
         src/UpdateChecker.cpp
         src/StartupLauncher.h
         src/StartupLauncher.cpp
+        src/MacWindow.h
+        ${MOSAIC_PLATFORM_WINDOW}
 )
 
 # The update checker compares the running version against the newest
@@ -108,9 +118,11 @@ qt6_add_shaders(Mosaic "mosaic_shaders"
 target_include_directories(Mosaic PRIVATE "${NDI_SDK_INCLUDE}" src src/ndi)
 target_link_libraries(Mosaic PRIVATE Qt6::Quick Qt6::Network "${NDI_SDK_LIB}")
 
-# macOS never-sleep (PowerGuard) uses IOKit power assertions.
+# macOS never-sleep (PowerGuard) uses IOKit power assertions; the fullscreen
+# menu-bar cover (MacWindow) uses AppKit.
 if(APPLE)
-    target_link_libraries(Mosaic PRIVATE "-framework IOKit" "-framework CoreFoundation")
+    target_link_libraries(Mosaic PRIVATE
+        "-framework IOKit" "-framework CoreFoundation" "-framework AppKit")
 endif()
 
 # The NDI runtime ships inside the app — never the system path (license terms).
