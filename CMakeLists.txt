@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.21)
 
 # "Mosaic" is a codename only — the product must not ship with "NDI" in its
 # name without approval from the NDI team (NDI SDK license terms).
-project(Mosaic VERSION 0.6.0 LANGUAGES CXX)
+project(Mosaic VERSION 0.6.5 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -89,6 +89,8 @@ qt_add_qml_module(Mosaic
         src/CursorGuard.cpp
         src/UpdateChecker.h
         src/UpdateChecker.cpp
+        src/StartupLauncher.h
+        src/StartupLauncher.cpp
 )
 
 # The update checker compares the running version against the newest

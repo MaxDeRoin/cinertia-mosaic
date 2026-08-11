@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Dialogs
 import Mosaic
 
 ApplicationWindow {
@@ -21,6 +22,105 @@ ApplicationWindow {
     // exists. Notify-only: the notice appears in Settings and About and
     // links to the releases page — nothing installs itself (show machines).
     UpdateChecker { id: updateChecker }
+    // Start-with-Windows registration. The registry is the source of
+    // truth, so the checkbox reads live state rather than session.json.
+    StartupLauncher { id: startupLauncher }
+
+    // Layout export/import: the whole current setup (tiles and canvases,
+    // like a profile) as a portable JSON file the user picks — for moving
+    // a look between machines or keeping show files with the show.
+    FileDialog {
+        id: exportDialog
+        title: "Export layout"
+        fileMode: FileDialog.SaveFile
+        nameFilters: ["Mosaic layout (*.json)"]
+        defaultSuffix: "json"
+        onAccepted: {
+            window.syncActiveProfile()
+            storage.saveUrl(selectedFile, JSON.stringify({
+                app: "Mosaic",
+                type: "layout",
+                version: 1,
+                tiles: canvas.captureTiles(),
+                outputs: window.captureOutputs(true)
+            }, null, 2))
+        }
+    }
+    FileDialog {
+        id: importDialog
+        title: "Import layout"
+        fileMode: FileDialog.OpenFile
+        nameFilters: ["Mosaic layout (*.json)", "All files (*)"]
+        // Building tiles and connecting their sources briefly blocks the
+        // interface, so the "Importing…" notice goes up first and the
+        // actual work runs one tick later — otherwise the notice would
+        // never get a chance to appear.
+        onAccepted: {
+            window.pendingImportUrl = selectedFile
+            window.importBusy = true
+            importStartTimer.start()
+        }
+    }
+    property bool importBusy: false
+    property url pendingImportUrl
+    property var pendingImportJson: null
+    // The import runs in stages with a rendered frame between them, so
+    // the busy notice paints before any work and the main canvas's new
+    // layout appears as early as possible: (1) after a short delay for
+    // the file dialog to get out of the way, read the file and rebuild
+    // the main canvas; (2) a beat later, rebuild the output canvases and
+    // register the imported profile; (3) drop the notice shortly after.
+    Timer {
+        id: importStartTimer
+        interval: 200
+        onTriggered: {
+            try {
+                const j = JSON.parse(
+                    storage.loadUrl(window.pendingImportUrl) || "null")
+                if (!j || !Array.isArray(j.tiles)) {
+                    console.warn("Not a Mosaic layout file")
+                    window.importBusy = false
+                    return
+                }
+                window.pendingImportJson = j
+                window.syncActiveProfile() // keep the active profile intact
+                canvas.applyTiles(j.tiles)
+                importPhase2.start()
+            } catch (e) {
+                console.warn("Could not import layout:", e)
+                window.importBusy = false
+            }
+        }
+    }
+    Timer {
+        id: importPhase2
+        interval: 50
+        onTriggered: {
+            const j = window.pendingImportJson
+            window.pendingImportJson = null
+            if (j)
+                window.applyOutputs(j.outputs)
+            // The import lands in the profiles list as its own entry,
+            // named after the file (numbered if that name is taken),
+            // and becomes the active profile.
+            let base = decodeURIComponent(
+                window.pendingImportUrl.toString().split(/[\\/]/).pop())
+                .replace(/\.json$/i, "").trim()
+            if (base === "")
+                base = "Imported layout"
+            let name = base
+            let n = 2
+            while (window.profiles.some(x => x.name === name))
+                name = base + " " + n++
+            window.saveProfile(name)
+            importEndTimer.start()
+        }
+    }
+    Timer {
+        id: importEndTimer
+        interval: 500
+        onTriggered: window.importBusy = false
+    }
     Timer {
         interval: 3000
         running: window.checkUpdates
@@ -111,6 +211,9 @@ ApplicationWindow {
     property bool hideCursor: true
     // Check GitHub for a newer release at startup (notify-only).
     property bool checkUpdates: true
+    // Thin gray border around tiles. Off for signage/video walls, where
+    // the border reads as a glow between tiles on fullscreen displays.
+    property bool tileBorders: true
     // Off (default): sidebar clicks toggle a source on/off the canvas.
     // On: every click adds another tile of the source, so one shot can be
     // cropped to several regions.
@@ -442,6 +545,22 @@ ApplicationWindow {
         currentProfile = name
     }
 
+    function renameProfile(oldName, newName) {
+        newName = newName.trim()
+        if (newName === "" || newName === oldName)
+            return
+        if (profiles.some(x => x.name === newName))
+            return // never silently clobber another profile
+        const idx = profiles.findIndex(x => x.name === oldName)
+        if (idx < 0)
+            return
+        profiles[idx].name = newName
+        profiles = profiles.slice()
+        if (currentProfile === oldName)
+            currentProfile = newName
+        saveProfilesFile()
+    }
+
     function deleteProfile(name) {
         profiles = profiles.filter(x => x.name !== name)
         if (currentProfile === name)
@@ -463,6 +582,7 @@ ApplicationWindow {
             statusDots: statusDots,
             hideCursor: hideCursor,
             checkUpdates: checkUpdates,
+            tileBorders: tileBorders,
             neverSleep: neverSleep,
             keepCanvases: keepCanvases,
             remoteEnabled: remoteEnabled,
@@ -495,6 +615,7 @@ ApplicationWindow {
                 statusDots = s.statusDots !== false
                 hideCursor = s.hideCursor !== false
                 checkUpdates = s.checkUpdates !== false
+                tileBorders = s.tileBorders !== false
                 neverSleep = s.neverSleep === true
                 keepCanvases = s.keepCanvases !== false
                 remoteEnabled = s.remoteEnabled === true
@@ -791,9 +912,14 @@ ApplicationWindow {
                         model: window.profiles
 
                         delegate: Rectangle {
+                            id: profRow
                             required property var modelData
                             readonly property bool isActive:
                                 window.currentProfile === modelData.name
+                            // Rename-in-place (the ✎ button): the row's
+                            // label swaps for a text box until committed
+                            // with Enter or cancelled with Esc.
+                            property bool editing: false
                             width: profilesSec.width
                             height: 30
                             radius: 3
@@ -805,12 +931,60 @@ ApplicationWindow {
                             Text {
                                 anchors.verticalCenter: parent.verticalCenter
                                 anchors.left: parent.left
-                                anchors.right: delBtn.left
+                                anchors.right: renBtn.left
                                 anchors.margins: 10
-                                text: parent.modelData.name
+                                text: profRow.modelData.name
                                 color: "#d8d8dc"
                                 font.pixelSize: 12
                                 elide: Text.ElideRight
+                                visible: !profRow.editing
+                            }
+                            TextInput {
+                                id: profEdit
+                                anchors.verticalCenter: parent.verticalCenter
+                                anchors.left: parent.left
+                                anchors.right: renBtn.left
+                                anchors.margins: 10
+                                color: "#d8d8dc"
+                                font.pixelSize: 12
+                                selectByMouse: true
+                                clip: true
+                                visible: profRow.editing
+                                onAccepted: {
+                                    window.renameProfile(profRow.modelData.name,
+                                                         text)
+                                    profRow.editing = false
+                                    keyCatcher.forceActiveFocus()
+                                }
+                                Keys.onEscapePressed: {
+                                    profRow.editing = false
+                                    keyCatcher.forceActiveFocus()
+                                }
+                                onActiveFocusChanged: {
+                                    if (!activeFocus)
+                                        profRow.editing = false
+                                }
+                            }
+                            Text {
+                                id: renBtn
+                                anchors.verticalCenter: parent.verticalCenter
+                                anchors.right: delBtn.left
+                                anchors.rightMargin: 6
+                                text: "✎"
+                                color: renHover.hovered ? "#3d7eff" : "#5a5a60"
+                                font.pixelSize: 13
+                                visible: profHover.hovered && !profRow.editing
+
+                                HoverHandler { id: renHover }
+                                TapHandler {
+                                    gesturePolicy: TapHandler.ReleaseWithinBounds
+                                    onTapped: {
+                                        profEdit.text = profRow.modelData.name
+                                        profRow.editing = true
+                                        profEdit.forceActiveFocus()
+                                        profEdit.selectAll()
+                                    }
+                                }
                             }
                             Text {
                                 id: delBtn
@@ -820,20 +994,21 @@ ApplicationWindow {
                                 text: "✕"
                                 color: delHover.hovered ? "#ff6060" : "#5a5a60"
                                 font.pixelSize: 13
-                                visible: profHover.hovered
+                                visible: profHover.hovered && !profRow.editing
 
                                 HoverHandler { id: delHover }
                                 TapHandler {
                                     gesturePolicy: TapHandler.ReleaseWithinBounds
                                     onTapped: window.deleteProfile(
-                                        delBtn.parent.modelData.name)
+                                        profRow.modelData.name)
                                 }
                             }
 
                             HoverHandler { id: profHover }
                             TapHandler {
+                                enabled: !profRow.editing
                                 gesturePolicy: TapHandler.ReleaseWithinBounds
-                                onTapped: window.applyProfile(parent.modelData.name)
+                                onTapped: window.applyProfile(profRow.modelData.name)
                             }
                         }
                     }
@@ -883,6 +1058,24 @@ ApplicationWindow {
                                 profName.text = ""
                                 keyCatcher.forceActiveFocus()
                             }
+                        }
+                    }
+
+                    // Layout files: save the current setup to a file the
+                    // user picks, or load one — for moving a look between
+                    // machines or archiving it with the show.
+                    Row {
+                        spacing: 4
+
+                        ToolBtn {
+                            label: "Export…"
+                            height: 24
+                            onActivated: exportDialog.open()
+                        }
+                        ToolBtn {
+                            label: "Import…"
+                            height: 24
+                            onActivated: importDialog.open()
                         }
                     }
                 }
@@ -948,6 +1141,7 @@ ApplicationWindow {
             tileGap: window.tileGap
             autoLowBw: window.autoLowBw
             statusDots: window.statusDots
+            tileBorders: window.tileBorders
             cursorGuard: cursorGuard
             availableSources: finder.sources
             moveWindowOnDrag: window.displayMode === 2
@@ -981,6 +1175,7 @@ ApplicationWindow {
             tileGap: window.tileGap
             autoLowBw: window.autoLowBw
             statusDots: window.statusDots
+            tileBorders: window.tileBorders
             cursorGuard: cursorGuard
             availableSources: finder.sources
             appQuitting: window.quitting
@@ -1261,6 +1456,11 @@ ApplicationWindow {
                 onToggled: window.hideCursor = !window.hideCursor
             }
             CheckRow {
+                label: "Show tile borders"
+                checked: window.tileBorders
+                onToggled: window.tileBorders = !window.tileBorders
+            }
+            CheckRow {
                 label: "Auto low bandwidth for small tiles"
                 checked: window.autoLowBw
                 onToggled: window.autoLowBw = !window.autoLowBw
@@ -1279,6 +1479,14 @@ ApplicationWindow {
                 label: "Check for updates at startup"
                 checked: window.checkUpdates
                 onToggled: window.checkUpdates = !window.checkUpdates
+            }
+            CheckRow {
+                // Windows-only for now: the macOS equivalent (Login
+                // Items) is not implemented yet, so hide the row there.
+                visible: Qt.platform.os === "windows"
+                label: "Start Mosaic when Windows starts"
+                checked: startupLauncher.enabled
+                onToggled: startupLauncher.enabled = !startupLauncher.enabled
             }
 
             Text {
@@ -1417,7 +1625,7 @@ ApplicationWindow {
                     font.weight: Font.DemiBold
                 }
                 Text {
-                    text: "Version 0.6.0 — Cinertia Systems"
+                    text: "Version 0.6.5 — Cinertia Systems"
                     color: "#8a8a90"
                     font.pixelSize: 12
                 }
@@ -1495,6 +1703,74 @@ ApplicationWindow {
                     label: "Close"
                     anchors.right: parent.right
                     onActivated: window.aboutOpen = false
+                }
+            }
+        }
+    }
+
+    // ------------------------------------------------ import busy notice
+    Rectangle {
+        anchors.fill: parent
+        visible: window.importBusy
+        z: 400
+        color: "#00000060"
+
+        MouseArea { anchors.fill: parent } // block clicks while loading
+
+        Rectangle {
+            anchors.centerIn: parent
+            width: busyRow.width + 40
+            height: 44
+            radius: 6
+            color: "#1a1a1e"
+            border.width: 1
+            border.color: "#2a2a2e"
+
+            Row {
+                id: busyRow
+                anchors.centerIn: parent
+                spacing: 10
+
+                // Spinner: the orbiting dot is driven by a RotationAnimator,
+                // which runs on the render thread — it keeps moving even
+                // while the import blocks the rest of the interface.
+                Item {
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 16
+                    height: 16
+
+                    Rectangle {
+                        anchors.fill: parent
+                        radius: 8
+                        color: "transparent"
+                        border.width: 2
+                        border.color: "#2a3a52"
+                    }
+                    Item {
+                        anchors.fill: parent
+
+                        Rectangle {
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            y: -2
+                            width: 6
+                            height: 6
+                            radius: 3
+                            color: "#3d7eff"
+                        }
+                        RotationAnimator on rotation {
+                            from: 0
+                            to: 360
+                            duration: 900
+                            loops: Animation.Infinite
+                            running: window.importBusy
+                        }
+                    }
+                }
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "Importing layout…"
+                    color: "#d8d8dc"
+                    font.pixelSize: 13
                 }
             }
         }

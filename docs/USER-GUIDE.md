@@ -207,7 +207,22 @@ sizes, every zoom/crop/rotation, names, and options.
 - **The active profile auto-saves.** Any change you make while a
   profile is active (highlighted) is folded into it automatically. The
   Save button is only for creating new profiles.
+- **Rename:** hover a profile, click ✎ — the name becomes editable in
+  place. Enter saves, Esc cancels. The active profile stays active
+  under its new name.
 - **Delete:** hover a profile, click ✕.
+
+### Layout files (Export / Import)
+
+The **Export…** and **Import…** buttons under PROFILES move a complete
+setup between machines or archive it with a show:
+
+- **Export…** saves the current setup — tiles, views, and all canvases
+  with their monitors and window modes — to a `.json` file wherever you
+  choose.
+- **Import…** loads such a file. The layout is applied, added to the
+  profiles list under the file's name (numbered if that name is taken),
+  and becomes the active profile. A progress notice covers the load.
 
 Mosaic also autosaves the whole session every 5 seconds and restores it
 on launch — even after a crash or power loss.
@@ -293,9 +308,11 @@ program/preview wall on the stage-left TV.
 | Auto low bandwidth for small tiles | On (default): tiles rendered at proxy size or smaller automatically receive the lighter NDI® proxy stream, reducing CPU and network load. The tile reconnects briefly when it crosses the size threshold |
 | Stream status indicators | On (default): a red dot on a tile that has lost its live connection to the source |
 | Hide mouse when idle | On (default): the mouse cursor disappears over Mosaic after 3 seconds without movement and returns when moved |
+| Show tile borders | On (default): the thin gray border around tiles. Turn off for a clean signage look — the border reads as a glow between tiles on fullscreen displays |
 | Keep canvases when switching profiles | On (default): canvases not saved in the selected profile stay open unchanged. Off: they close |
 | Keep display awake | Stops Windows blanking the screen (unattended operation) |
 | Check for updates at startup | On (default): asks GitHub once at startup whether a newer release exists (see Updates below) |
+| Start Mosaic when Windows starts | Windows: launches Mosaic at sign-in. Session restore then brings every canvas back on its display in its saved mode |
 | Remote control + port | The Companion/Stream Deck TCP interface |
 | Tile spacing | Gap used by layouts; 0 = seamless |
 | Shortcuts… | Every keyboard and mouse shortcut, grouped by where it applies |

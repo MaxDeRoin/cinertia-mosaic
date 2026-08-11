@@ -41,6 +41,11 @@ Item {
     // From settings: show the stream status dot (red/yellow) when the
     // source is down or stalling.
     property bool showStatusDot: true
+    // From settings: the thin gray tile border. Off for signage — on a
+    // fullscreen video wall the border reads as a glow on other displays.
+    // The blue selection accent still appears while interacting (it fades
+    // on its own).
+    property bool showBorder: true
     // The owning canvas — provides edge magnetism and group lookup.
     property Item canvasItem: null
     // Custom label (e.g. "CAM 1 — STAGE LEFT"); empty = show source name.
@@ -138,7 +143,7 @@ Item {
     Rectangle {
         anchors.fill: parent
         color: "#101013"
-        border.width: 1
+        border.width: (tile.showBorder || (tile.selected && !tile.highlightFaded)) ? 1 : 0
         border.color: (tile.selected && !tile.highlightFaded) ? "#3d7eff" : "#26262b"
         Behavior on border.color { ColorAnimation { duration: 400 } }
         clip: true // video must never draw outside its tile

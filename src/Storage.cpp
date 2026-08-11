@@ -34,3 +34,20 @@ bool Storage::save(const QString &fileName, const QString &contents) const
     file.write(contents.toUtf8());
     return true;
 }
+
+QString Storage::loadUrl(const QUrl &url) const
+{
+    QFile file(url.toLocalFile());
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
+        return {};
+    return QString::fromUtf8(file.readAll());
+}
+
+bool Storage::saveUrl(const QUrl &url, const QString &contents) const
+{
+    QFile file(url.toLocalFile());
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text))
+        return false;
+    file.write(contents.toUtf8());
+    return true;
+}

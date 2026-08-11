@@ -12,7 +12,21 @@ approval from the NDI team, so everything internal uses this codename for now.
 Easy to rename later.
 
 ## Current status
-**Current release: 0.6.0 — viewing polish and update notices.**
+**Current release: 0.6.5 — signage and layout files.** A "Show tile
+borders" setting (off = borderless tiles for clean signage output), a
+Windows-only "Start Mosaic when Windows starts" setting
+(`src/StartupLauncher.cpp`, per-user registry Run key; the checkbox is
+hidden on macOS until Login Items support exists), layout Export…/
+Import… under PROFILES (portable JSON via `Storage::saveUrl/loadUrl`
+and QtQuick.Dialogs file dialogs; imports join the profiles list named
+after the file and a spinner notice covers the load), and in-place
+profile renaming (✎ on hover). Windows installer, guide PDF and
+Companion module are on the v0.6.5 GitHub release; the macOS dmg gets
+attached from the Mac, which then marks v0.6.5 as latest. Note: v0.6.0
+was released on Windows only (the Mac skipped straight to 0.6.5); its
+release stays non-latest without a dmg.
+
+**Previous release: 0.6.0 — viewing polish and update notices.**
 Fit now respects rotation: it fits the picture at its current angle,
 reshaping an uncropped tile to the rotated outline within the tile's
 footprint. The fit factor lives in the render transform

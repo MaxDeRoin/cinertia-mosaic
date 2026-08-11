@@ -18,6 +18,7 @@ Rectangle {
     property bool autoLowBw: true
     // Show per-tile stream status dots.
     property bool statusDots: true
+    property bool tileBorders: true
     // The app-wide idle-cursor hider; poked on any mouse movement here.
     property var cursorGuard: null
     // Source names offered in each tile's "change source" list.
@@ -537,6 +538,7 @@ Rectangle {
                 globalShowName: canvas.globalShowName
                 autoLowBw: canvas.autoLowBw
                 showStatusDot: canvas.statusDots
+                showBorder: canvas.tileBorders
                 canvasItem: canvas
                 availableSources: canvas.availableSources
                 gridSize: 16

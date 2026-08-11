@@ -6,6 +6,33 @@ Vizrt NDI AB.
 
 ---
 
+## 0.6.5 — 2026-08-11
+
+### Signage
+- **Show tile borders (new setting, on by default):** turning it off
+  removes the thin gray border around every tile on every canvas, for a
+  clean full-screen look on monitors and signage — the border otherwise
+  reads as a glow between tiles. The blue selection accent still
+  appears while working and fades on its own.
+- **Start Mosaic when Windows starts (new setting, Windows):** registers
+  Mosaic to launch at sign-in (per user, no administrator rights).
+  Combined with session restore — which already reopens every canvas on
+  its assigned display in its saved window mode — the multiviewer
+  reassembles itself after a reboot.
+
+### Layout files
+- **Export / Import:** two buttons under PROFILES save the complete
+  current setup (tiles, views, and all canvases with their monitors and
+  window modes) to a portable `.json` file, or load one — for moving a
+  look between machines or archiving it with the show. An imported
+  layout is added to the profiles list under the file's name and
+  becomes the active profile. A progress notice covers the load.
+- **Rename profiles:** hover a profile and click the ✎ to rename it in
+  place — Enter saves, Esc cancels. The active profile stays active
+  under its new name.
+
+---
+
 ## 0.6.0 — 2026-07-16
 
 ### Viewing
