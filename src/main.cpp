@@ -2,6 +2,7 @@
 #include <QQmlApplicationEngine>
 #include <QDir>
 #include <QNetworkInterface>
+#include <QProcess>
 
 #include <Processing.NDI.Lib.h>
 
@@ -53,6 +54,26 @@ int main(int argc, char *argv[])
         return 1;
     }
     diagLog(QStringLiteral("NDI runtime initialized OK."));
+
+    // Independent system-mDNS monitor: dns-sd talks straight to macOS's
+    // mDNSResponder (Bonjour), separate from NDI's own runtime. If launching
+    // Mosaic wedges discovery machine-wide, these MDNS lines show sources
+    // being removed even while Mosaic's own finder still lists them.
+    {
+        QProcess *mdns = new QProcess(&app);
+        mdns->setProcessChannelMode(QProcess::MergedChannels);
+        QObject::connect(mdns, &QProcess::readyReadStandardOutput, mdns, [mdns]() {
+            const QList<QByteArray> lines = mdns->readAllStandardOutput().split('\n');
+            for (const QByteArray &ln : lines) {
+                if (ln.trimmed().isEmpty())
+                    continue;
+                diagLog(QStringLiteral("MDNS %1").arg(QString::fromUtf8(ln)));
+            }
+        });
+        mdns->start(QStringLiteral("/usr/bin/dns-sd"),
+                    {QStringLiteral("-B"), QStringLiteral("_ndi._tcp"),
+                     QStringLiteral("local.")});
+    }
 
     int result = 1;
     {

@@ -54,6 +54,7 @@ private:
     qint64 m_lastConnCheckMs = -10000;
     int m_connections = 0;
     int m_health = -1;
+    QString m_srcName; // diagnostic: source this worker is receiving
     QString m_status;
     QString m_streamInfo;
     bool m_captureAudio = false;

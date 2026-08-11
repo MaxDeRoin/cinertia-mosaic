@@ -80,6 +80,7 @@ void NdiReceiveWorker::start(const QString &sourceName, bool lowBandwidth,
     desc.allow_video_fields = false;
     desc.p_ndi_recv_name = nullptr;
 
+    m_srcName = sourceName;
     diagLog(QStringLiteral("RECV connecting to \"%1\" (bandwidth=%2, lowLatency=%3)")
                 .arg(sourceName,
                      lowBandwidth ? QStringLiteral("lowest") : QStringLiteral("highest"),
@@ -234,6 +235,11 @@ void NdiReceiveWorker::updateHealth()
     const int health = (m_connections <= 0 || m_lastFrameMs == 0) ? 2 : 0;
     if (health != m_health) {
         m_health = health;
+        diagLog(QStringLiteral("RECV \"%1\" health=%2 (connections=%3, gotFrames=%4)")
+                    .arg(m_srcName)
+                    .arg(health == 0 ? QStringLiteral("OK") : QStringLiteral("NO-SIGNAL"))
+                    .arg(m_connections)
+                    .arg(m_lastFrameMs == 0 ? QStringLiteral("no") : QStringLiteral("yes")));
         emit healthChanged(health);
     }
 }
