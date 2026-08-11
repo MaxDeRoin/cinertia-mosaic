@@ -56,6 +56,13 @@ void CursorGuard::setHovering(bool hovering)
     }
 }
 
+bool CursorGuard::cursorInside(QQuickWindow *window) const
+{
+    // QCursor::pos() and QWindow::geometry() are both in device-independent
+    // global coordinates, so this stays correct on Retina/scaled displays.
+    return window && window->geometry().contains(QCursor::pos());
+}
+
 void CursorGuard::hideCursor()
 {
     // Override cursors only affect this application's windows — the

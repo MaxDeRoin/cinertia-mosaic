@@ -15,6 +15,14 @@ Vizrt NDI AB.
   signage display shows only the live video, with no chrome appearing
   even on mouse-over. Turn it back on to arrange tiles again.
 
+### Fixes (macOS)
+- **Tile control bar no longer sticks on a second display.** On a
+  secondary or fullscreen output the hover bar could stay visible after
+  the mouse moved away, because macOS sometimes withholds the
+  pointer-left event from a non-focused window. Mosaic now falls back to
+  the real cursor position and hides the bar as soon as the pointer
+  actually leaves the window.
+
 ---
 
 ## 0.6.5 — 2026-08-11

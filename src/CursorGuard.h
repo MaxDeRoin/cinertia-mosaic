@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QObject>
+#include <QQuickWindow>
 #include <QtQml/qqmlregistration.h>
 
 class QTimer;
@@ -27,6 +28,10 @@ public:
     // only ever hides while it is over a canvas (never over the
     // sidebar, menus, or other chrome).
     Q_INVOKABLE void setHovering(bool hovering);
+    // True when the real cursor is within the window's bounds. Ground
+    // truth via QCursor::pos(), used as a fallback for the hover header
+    // when QML's HoverHandler misses a leave event on a secondary display.
+    Q_INVOKABLE bool cursorInside(QQuickWindow *window) const;
 
 signals:
     void enabledChanged();

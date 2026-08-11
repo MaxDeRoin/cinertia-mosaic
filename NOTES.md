@@ -18,11 +18,16 @@ handle, rotate/crop/fit/reset/close, ☰ menu) so an output/signage
 display shows only video, with no chrome even on hover — plumbed like
 "Show tile borders" (`tileControls` in Main → `TileCanvas` →
 `showControls` in `Tile`, through `OutputWindow`, saved in the session).
-Motivated by a macOS quirk where a tile's hover header occasionally
-stayed visible on one display; the toggle is the clean-output fix, and
-the underlying hover-clear bug is being looked at next. Version bumped to
+Also fixes the underlying macOS quirk that motivated it: a tile's hover
+control bar could stick on a secondary/fullscreen display because macOS
+withholds the pointer-left event from a non-focused window, so QML's
+HoverHandler never cleared. Fix: while a tile is hovered, `TileCanvas`
+polls the real cursor via a new `CursorGuard::cursorInside(window)`
+(ground truth from `QCursor::pos()`, DPI-safe) and drops the hover once
+the pointer actually leaves the window. Cross-platform, cheap (only runs
+while a bar is showing). Verified by Max 2026-08-11. Version bumped to
 0.6.6 (CMake, installer, .rc). Not yet released — the macOS dmg and
-GitHub release come once the hover work lands.
+GitHub release come next.
 
 **Previous release: 0.6.5 — signage and layout files. Complete on both
 platforms.** A "Show tile borders" setting (off = borderless tiles for

@@ -454,6 +454,22 @@ Rectangle {
         }
     }
 
+    // Safety net for a macOS HoverHandler quirk: on a secondary or
+    // fullscreen display the canvas can miss the pointer-leave event,
+    // leaving a tile's hover header stuck on after the cursor moves to
+    // another display. While a tile is hovered, poll the real cursor and
+    // drop the hover once it actually leaves this window.
+    Timer {
+        interval: 250
+        repeat: true
+        running: canvas.hoverTile !== null && canvas.cursorGuard !== null
+                 && canvas.Window.window !== null
+        onTriggered: {
+            if (!canvas.cursorGuard.cursorInside(canvas.Window.window))
+                canvas.hoverTile = null
+        }
+    }
+
     // Click empty canvas to deselect and close any open tile menus.
     TapHandler {
         gesturePolicy: TapHandler.ReleaseWithinBounds
