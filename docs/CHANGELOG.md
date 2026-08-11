@@ -6,6 +6,17 @@ Vizrt NDI AB.
 
 ---
 
+## 0.6.6 — 2026-08-11
+
+### Signage
+- **Show tile controls (new setting, on by default):** turning it off
+  hides the top control bar on every tile — the drag handle, the
+  rotate/crop/fit/reset/close buttons, and the ☰ menu — so an output or
+  signage display shows only the live video, with no chrome appearing
+  even on mouse-over. Turn it back on to arrange tiles again.
+
+---
+
 ## 0.6.5 — 2026-08-11
 
 ### Signage

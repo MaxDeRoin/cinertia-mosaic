@@ -33,6 +33,7 @@ Window {
     property bool autoLowBw: true
     property bool statusDots: true
     property bool tileBorders: true
+    property bool tileControls: true
     property var cursorGuard: null
     property var availableSources: []
 
@@ -167,6 +168,7 @@ Window {
         autoLowBw: out.autoLowBw
         statusDots: out.statusDots
         tileBorders: out.tileBorders
+        tileControls: out.tileControls
         cursorGuard: out.cursorGuard
         availableSources: out.availableSources
         // Windowless has no title bar — dragging the canvas background

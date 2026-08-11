@@ -46,6 +46,10 @@ Item {
     // The blue selection accent still appears while interacting (it fades
     // on its own).
     property bool showBorder: true
+    // From settings: show the tile's top control bar (drag handle, rotate/
+    // crop/fit/reset/close, ⋯ menu). Off for a clean output display where no
+    // one arranges tiles — the header never appears, even on hover.
+    property bool showControls: true
     // The owning canvas — provides edge magnetism and group lookup.
     property Item canvasItem: null
     // Custom label (e.g. "CAM 1 — STAGE LEFT"); empty = show source name.
@@ -344,7 +348,7 @@ Item {
             anchors.margins: 1
             height: 28
             color: "#1a1a1ee6"
-            opacity: (tile.hoverTop || moveArea.pressed || tile.sizeOpen || tile.optsOpen || tile.menuOpen) ? 1 : 0
+            opacity: (tile.showControls && (tile.hoverTop || moveArea.pressed || tile.sizeOpen || tile.optsOpen || tile.menuOpen)) ? 1 : 0
             visible: opacity > 0
             Behavior on opacity { NumberAnimation { duration: 120 } }
 

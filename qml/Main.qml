@@ -216,6 +216,9 @@ ApplicationWindow {
     // Thin gray border around tiles. Off for signage/video walls, where
     // the border reads as a glow between tiles on fullscreen displays.
     property bool tileBorders: true
+    // Show the tile's top control bar (drag handle + rotate/crop/fit/reset/
+    // close + ⋯ menu). Off for a clean output where no one arranges tiles.
+    property bool tileControls: true
     // Off (default): sidebar clicks toggle a source on/off the canvas.
     // On: every click adds another tile of the source, so one shot can be
     // cropped to several regions.
@@ -615,6 +618,7 @@ ApplicationWindow {
             hideCursor: hideCursor,
             checkUpdates: checkUpdates,
             tileBorders: tileBorders,
+            tileControls: tileControls,
             neverSleep: neverSleep,
             keepCanvases: keepCanvases,
             remoteEnabled: remoteEnabled,
@@ -648,6 +652,7 @@ ApplicationWindow {
                 hideCursor = s.hideCursor !== false
                 checkUpdates = s.checkUpdates !== false
                 tileBorders = s.tileBorders !== false
+                tileControls = s.tileControls !== false
                 neverSleep = s.neverSleep === true
                 keepCanvases = s.keepCanvases !== false
                 remoteEnabled = s.remoteEnabled === true
@@ -1174,6 +1179,7 @@ ApplicationWindow {
             autoLowBw: window.autoLowBw
             statusDots: window.statusDots
             tileBorders: window.tileBorders
+            tileControls: window.tileControls
             cursorGuard: cursorGuard
             availableSources: finder.sources
             moveWindowOnDrag: window.displayMode === 2
@@ -1208,6 +1214,7 @@ ApplicationWindow {
             autoLowBw: window.autoLowBw
             statusDots: window.statusDots
             tileBorders: window.tileBorders
+            tileControls: window.tileControls
             cursorGuard: cursorGuard
             availableSources: finder.sources
             appQuitting: window.quitting
@@ -1491,6 +1498,11 @@ ApplicationWindow {
                 label: "Show tile borders"
                 checked: window.tileBorders
                 onToggled: window.tileBorders = !window.tileBorders
+            }
+            CheckRow {
+                label: "Show tile controls"
+                checked: window.tileControls
+                onToggled: window.tileControls = !window.tileControls
             }
             CheckRow {
                 label: "Auto low bandwidth for small tiles"

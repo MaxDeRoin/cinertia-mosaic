@@ -309,6 +309,7 @@ program/preview wall on the stage-left TV.
 | Stream status indicators | On (default): a red dot on a tile that has lost its live connection to the source |
 | Hide mouse when idle | On (default): the mouse cursor disappears over Mosaic after 3 seconds without movement and returns when moved |
 | Show tile borders | On (default): the thin gray border around tiles. Turn off for a clean signage look — the border reads as a glow between tiles on fullscreen displays |
+| Show tile controls | On (default): the top control bar on each tile (drag handle, rotate/crop/fit/reset/close, ☰ menu). Turn off for a clean output display — the bar stays hidden even on mouse-over; turn back on to arrange tiles |
 | Keep canvases when switching profiles | On (default): canvases not saved in the selected profile stay open unchanged. Off: they close |
 | Keep display awake | Stops Windows blanking the screen (unattended operation) |
 | Check for updates at startup | On (default): asks GitHub once at startup whether a newer release exists (see Updates below) |

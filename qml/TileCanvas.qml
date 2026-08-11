@@ -19,6 +19,8 @@ Rectangle {
     // Show per-tile stream status dots.
     property bool statusDots: true
     property bool tileBorders: true
+    // Show the tile top control bar (off = clean output, no tile chrome).
+    property bool tileControls: true
     // The app-wide idle-cursor hider; poked on any mouse movement here.
     property var cursorGuard: null
     // Source names offered in each tile's "change source" list.
@@ -539,6 +541,7 @@ Rectangle {
                 autoLowBw: canvas.autoLowBw
                 showStatusDot: canvas.statusDots
                 showBorder: canvas.tileBorders
+                showControls: canvas.tileControls
                 canvasItem: canvas
                 availableSources: canvas.availableSources
                 gridSize: 16

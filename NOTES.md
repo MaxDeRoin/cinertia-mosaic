@@ -12,7 +12,19 @@ approval from the NDI team, so everything internal uses this codename for now.
 Easy to rename later.
 
 ## Current status
-**Current release: 0.6.5 — signage and layout files. Complete on both
+**In progress: 0.6.6 — output polish.** Adds a "Show tile controls"
+setting (on by default): off hides every tile's top control bar (drag
+handle, rotate/crop/fit/reset/close, ☰ menu) so an output/signage
+display shows only video, with no chrome even on hover — plumbed like
+"Show tile borders" (`tileControls` in Main → `TileCanvas` →
+`showControls` in `Tile`, through `OutputWindow`, saved in the session).
+Motivated by a macOS quirk where a tile's hover header occasionally
+stayed visible on one display; the toggle is the clean-output fix, and
+the underlying hover-clear bug is being looked at next. Version bumped to
+0.6.6 (CMake, installer, .rc). Not yet released — the macOS dmg and
+GitHub release come once the hover work lands.
+
+**Previous release: 0.6.5 — signage and layout files. Complete on both
 platforms.** A "Show tile borders" setting (off = borderless tiles for
 clean signage output), a Windows-only "Start Mosaic when Windows starts"
 setting (`src/StartupLauncher.cpp`, per-user registry Run key; the
