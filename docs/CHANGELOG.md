@@ -6,6 +6,37 @@ Vizrt NDI AB.
 
 ---
 
+## 0.7.0 — 2026-08-12
+
+The stable release of the 0.6.7/0.6.8 fix line — all diagnostic logging
+removed.
+
+### Fixes (macOS)
+- **Mosaic no longer stops NDI working machine-wide.** The app bundle
+  declared the `_ndi._tcp` Bonjour service, which macOS registered
+  against the app as soon as it was on disk and could block NDI
+  discovery for every app on the machine until Mosaic was deleted. The
+  declaration was never needed (NDI's runtime does its own discovery)
+  and is gone. **Upgrading from 0.6.7 or older needs a one-time
+  cleanup** — see the v0.7.0 release notes.
+- **Fullscreen lands on the display you picked** — including at login:
+  fullscreen re-asserts itself once the window is actually shown and
+  when displays finish waking up, instead of applying once too early.
+- **Fullscreen truly covers the display**: macOS reserved room for the
+  menu bar and Dock around a borderless cover (a ~20px gap on every
+  edge); the frame is now forced to the exact screen bounds.
+- **The menu bar no longer shows over a fullscreen canvas launched at
+  login.** Hiding it politely only works for the focused app — and a
+  login-launched app can't take focus on modern macOS — so the
+  fullscreen cover now draws above the menu bar's window layer, covering
+  it regardless of focus.
+
+### Remote control
+- **`FSSCREEN n`** picks the fullscreen monitor (1-based), same as
+  clicking a monitor button in settings — for Companion / Stream Deck.
+
+---
+
 ## 0.6.8 — 2026-08-12
 
 ### Fixes (macOS)

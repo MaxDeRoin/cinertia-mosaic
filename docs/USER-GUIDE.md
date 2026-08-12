@@ -392,6 +392,7 @@ commands on buttons — one per line, case-insensitive:
 | `PROFILEINDEX 2` | switch to the 2nd profile in the list |
 | `LAYOUT 2x2` | apply a layout (2x2, 3x3, 4x4, 1+side, 2+8, 2+1) |
 | `MODE fullscreen` | windowed / fullscreen / windowless |
+| `FSSCREEN 2` | pick the fullscreen monitor (1-based), same as the monitor buttons in settings |
 | `PING` | connectivity check |
 | `PROFILES?` | replies `PROFILES ["Show A", …]` |
 | `STATUS?` | replies `STATUS {"profile":…,"mode":…,"tiles":…}` |

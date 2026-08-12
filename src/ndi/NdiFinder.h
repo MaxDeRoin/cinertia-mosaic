@@ -29,5 +29,4 @@ private:
     void *m_finder = nullptr; // NDIlib_find_instance_t
     QTimer m_timer;
     QStringList m_sources;
-    unsigned long m_pollCount = 0; // diagnostic heartbeat counter
 };

@@ -376,10 +376,6 @@ ApplicationWindow {
         if (displayMode === 1) {
             const screens = Qt.application.screens
             const target = screens[Math.min(fsScreenIndex, screens.length - 1)]
-            console.log("applyDisplayMode: fullscreen main -> screen", fsScreenIndex,
-                        "of", screens.length, "(" + target.name + " at",
-                        target.virtualX + "," + target.virtualY,
-                        target.width + "x" + target.height + ")")
             fsActive = true
             if (Qt.platform.os === "windows") {
                 // Native fullscreen; dip through windowed so a monitor
@@ -404,11 +400,6 @@ ApplicationWindow {
                 window.visible = true
                 window.raise()
                 macWindow.setCoversMenuBar(window, true)
-                Qt.callLater(function() {
-                    console.log("post-apply geom (main):", window.x, window.y,
-                                window.width + "x" + window.height,
-                                "on screen", window.screen ? window.screen.name : "?")
-                })
             }
         } else {
             fsActive = false
@@ -1454,11 +1445,7 @@ ApplicationWindow {
                         width: parent.width
                         label: (index + 1) + ": " + modelData.name
                         active: window.fsScreenIndex === index
-                        onActivated: {
-                            console.log("monitor picker (main): clicked screen",
-                                        index, "displayMode", window.displayMode)
-                            window.fsScreenIndex = index
-                        }
+                        onActivated: window.fsScreenIndex = index
                     }
                 }
             }

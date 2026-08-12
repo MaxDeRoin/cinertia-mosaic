@@ -12,8 +12,39 @@ approval from the NDI team, so everything internal uses this codename for now.
 Easy to rename later.
 
 ## Current status
-**0.6.8 fix confirmed working after stale-data cleanup (2026-08-12) —
-awaiting Max's reboot-cycle confirmation before the clean 0.6.9 release.**
+**Current release: 0.7.0 — the macOS NDI + fullscreen fix release,
+confirmed by Max on his production machine (2026-08-12).** Everything
+from the 0.6.7/0.6.8 diagnostic line, stabilized, with all diagnostic
+logging removed: the machine-wide NDI break is fixed (NSBonjourServices
+removed from Info.plist; upgrades from ≤0.6.7 need the one-time cleanup
+in the release notes), fullscreen lands on the picked display including
+at login (re-asserts when the window shows / displays wake), covers the
+display exactly (AppKit constrained borderless covers ~20px short), and
+covers the menu bar even when launched from the login items (draws above
+the menu-bar window layer — presentation options only work for the
+focused app and login-launched apps can't take focus on modern macOS).
+New remote command `FSSCREEN n` picks the fullscreen monitor. The macOS
+dmg is on the v0.7.0 release, marked latest. Confirmed on Max's machine:
+reboot cycles with Mosaic in the login items, NDI Video Monitor keeps
+working, fullscreen restores edge-to-edge on the right display with no
+menu bar.
+
+**Note for the Windows session — building 0.7.0 on the PC:** pull
+master and rebuild; version bumps (CMake/installer/.rc) are already
+committed. Everything in 0.6.6→0.7.0 is shared QML/C++ or isolated
+macOS-only code — the Windows paths are unchanged (native fullscreen
+dance kept verbatim; `MacWindow.cpp` compiles as a no-op; the fullscreen
+re-assert hooks are idempotent and harmless on Windows). What Windows
+GAINS: the "Show tile controls" setting (0.6.6), the tile-hover
+cursor-position fallback (0.6.6, cross-platform), and `FSSCREEN` (0.7.0).
+Note v0.6.6 was released macOS-only, so the last Windows installer is
+0.6.5 — build `Mosaic-Setup-0.7.0.exe`, verify the fullscreen monitor
+picker still works on Windows (the code was restructured around a
+platform guard), attach the installer + guide PDF to the v0.7.0 release.
+The Companion module is unchanged (0.1.1) but `FSSCREEN` is available
+for a future module update.
+
+**Previous (diagnostic line): 0.6.8.**
 Key operational lesson: the Info.plist fix alone was NOT enough on
 machines that ever ran an older Mosaic — macOS (LaunchServices) caches
 the old app's Info.plist, `_ndi._tcp` declaration included, and keeps
@@ -385,6 +416,7 @@ Enable in settings, default port 9955. One command per line:
 | `PROFILEINDEX 2` | switch to the 2nd profile in the list |
 | `LAYOUT 2x2` | apply a layout (2x2, 3x3, 4x4, 1+side, 2+8, 2+1) |
 | `MODE fullscreen` | display mode (windowed, fullscreen, windowless) |
+| `FSSCREEN 2` | pick the fullscreen monitor (1-based) |
 | `PING` | connectivity check |
 | `PROFILES?` | replies `PROFILES ["Show A","Show B"]` (JSON list) |
 | `STATUS?` | replies `STATUS {"profile":"Show A","mode":"windowed","tiles":3}` |
