@@ -2,8 +2,15 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <!-- Info.plist template for the macOS bundle. CMake substitutes the
      MACOSX_BUNDLE dollar-brace variables at configure time. Extends CMake's
-     default with the Local Network privacy string and the NDI Bonjour
-     service type. -->
+     default with the Local Network privacy description string.
+
+     NOTE: we deliberately do NOT declare an NSBonjourServices _ndi._tcp
+     entry. NDI's runtime does its own mDNS discovery (it doesn't use
+     Apple's Bonjour/NSNetService API), so the official NDI Tools don't
+     declare it either. Declaring it registered Mosaic as an _ndi._tcp
+     consumer in the Local Network privacy layer as soon as the app was on
+     disk, which — for an unnotarized app — could wedge _ndi._tcp discovery
+     machine-wide until the app was deleted. -->
 <plist version="1.0">
 <dict>
 	<key>CFBundleDevelopmentRegion</key>
@@ -36,9 +43,5 @@
 	<string>12.0</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Mosaic discovers and receives NDI® video sources on your local network.</string>
-	<key>NSBonjourServices</key>
-	<array>
-		<string>_ndi._tcp</string>
-	</array>
 </dict>
 </plist>

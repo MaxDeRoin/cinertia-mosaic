@@ -12,6 +12,22 @@ approval from the NDI team, so everything internal uses this codename for now.
 Easy to rename later.
 
 ## Current status
+**Fix candidate: 0.6.8 — the machine-wide NDI break.** Root cause found:
+Mosaic's `Info.plist` declared `NSBonjourServices = [_ndi._tcp]`. On macOS
+that registers the app as an `_ndi._tcp` consumer in the Local Network
+privacy layer the moment the app is on disk (via LaunchServices), and for
+an unnotarized/ad-hoc-signed app that could wedge `_ndi._tcp` mDNS
+discovery machine-wide — breaking NDI for every app (including the
+official tools) until Mosaic was *deleted* (which is exactly the symptom
+Max hit: present breaks it, survives reboot, deleting fixes it; the
+official NDI tools don't declare it). NDI's runtime does its own mDNS and
+doesn't use Apple's Bonjour API, so the declaration was never needed —
+removed it from `resources/Info.plist.in`. Verified locally that
+discovery AND reception still work without it (`FINDER now sees…`,
+`health=OK, gotFrames=yes`). Shipped as a GitHub pre-release with the
+0.6.7 diagnostic logging still in, so Max can confirm the fix on his
+production network; once confirmed, the next release strips the logging.
+
 **Diagnostic build: 0.6.7 — NDI logging.** Temporary build to chase a
 macOS bug where launching Mosaic can stop NDI working machine-wide until
 reboot (only with network sources — a local source never reproduces it,

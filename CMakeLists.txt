@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.21)
 
 # "Mosaic" is a codename only — the product must not ship with "NDI" in its
 # name without approval from the NDI team (NDI SDK license terms).
-project(Mosaic VERSION 0.6.7 LANGUAGES CXX)
+project(Mosaic VERSION 0.6.8 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -64,8 +64,9 @@ elseif(APPLE)
         MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION}"
         MACOSX_BUNDLE_COPYRIGHT "© 2026 Cinertia Systems. NDI® is a registered trademark of Vizrt NDI AB.")
     # Custom Info.plist template: adds NSLocalNetworkUsageDescription (the
-    # explanation shown in the "find devices on local networks?" dialog) and
-    # the NDI Bonjour service type on top of CMake's standard bundle keys.
+    # explanation shown in the "find devices on local networks?" dialog) on
+    # top of CMake's standard bundle keys. (It deliberately does NOT declare
+    # an NSBonjourServices _ndi._tcp entry — see the note in Info.plist.in.)
     set_target_properties(Mosaic PROPERTIES
         MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/resources/Info.plist.in")
 endif()

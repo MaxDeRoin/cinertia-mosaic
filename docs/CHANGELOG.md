@@ -6,6 +6,24 @@ Vizrt NDI AB.
 
 ---
 
+## 0.6.8 — 2026-08-12
+
+### Fixes (macOS)
+- **Fixed: Mosaic could stop NDI working machine-wide.** Mosaic's app
+  bundle declared the `_ndi._tcp` Bonjour service in its Info.plist. On
+  macOS that registered Mosaic as a consumer of that service in the Local
+  Network privacy layer as soon as the app was on disk — which could
+  block NDI discovery for every app on the machine (including the official
+  NDI tools) until Mosaic was deleted. NDI's runtime does its own mDNS
+  discovery and never needed the declaration (the official NDI tools don't
+  declare it either), so it's been removed. Discovery and reception are
+  unaffected.
+
+(This build still carries the temporary NDI diagnostic logging from 0.6.7;
+it is removed in the next release.)
+
+---
+
 ## 0.6.7 — 2026-08-11
 
 ### Diagnostics
