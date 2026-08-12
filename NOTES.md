@@ -12,6 +12,28 @@ approval from the NDI team, so everything internal uses this codename for now.
 Easy to rename later.
 
 ## Current status
+**0.6.8 fix confirmed working after stale-data cleanup (2026-08-12) —
+awaiting Max's reboot-cycle confirmation before the clean 0.6.9 release.**
+Key operational lesson: the Info.plist fix alone was NOT enough on
+machines that ever ran an older Mosaic — macOS (LaunchServices) caches
+the old app's Info.plist, `_ndi._tcp` declaration included, and keeps
+honoring it after the app is replaced or even deleted (stale entries
+survived pointing at paths that no longer existed). NDI came back only
+after purging: delete app + empty Trash → `lsregister -kill -r -domain
+local -domain system -domain user` (rebuilds the app database; resets
+Open-With associations, System Settings looks blank until reboot) →
+`rm -rf ~/Library/"Application Support"/"Cinertia Systems"
+~/Library/Logs/Mosaic` → reboot → install 0.6.8. These steps are in the
+v0.6.8 release notes. Mosaic's data lives at: `~/Library/Application
+Support/Cinertia Systems/Mosaic/` (session+profiles),
+`~/Library/Logs/Mosaic/` (diagnostic log), plus hidden state in the
+LaunchServices DB and the Local Network privacy list
+(`/Library/Preferences/com.apple.networkextension.plist`). Once Max
+confirms stability across reboot cycles, ship 0.6.9: strip the
+diagnostic logging (DiagLog.h, the dns-sd child process in main.cpp, the
+FINDER/RECV log lines), fix the cursorGuard binding-loop warning
+(Main.qml:1205 — OutputWindow delegate), and mark it latest.
+
 **Fix candidate: 0.6.8 — the machine-wide NDI break.** Root cause found:
 Mosaic's `Info.plist` declared `NSBonjourServices = [_ndi._tcp]`. On macOS
 that registers the app as an `_ndi._tcp` consumer in the Local Network
