@@ -84,6 +84,30 @@ Window {
             Qt.callLater(applyMode)
     }
 
+    // Startup re-assert: at login/session restore, applyMode's first run can
+    // happen before the window is mapped or before macOS has brought up all
+    // displays — the OS then places the window on the wrong screen and the
+    // menu-bar cover never engages. Re-apply (idempotent) once the window is
+    // actually visible, whenever the display list changes, and once more a
+    // moment after startup.
+    onVisibleChanged: {
+        if (visible && windowMode === 1)
+            Qt.callLater(applyMode)
+    }
+    Connections {
+        target: Qt.application
+        function onScreensChanged() {
+            if (out.windowMode === 1)
+                Qt.callLater(out.applyMode)
+        }
+    }
+    Timer {
+        interval: 1500
+        running: out.windowMode === 1
+        repeat: false
+        onTriggered: out.applyMode()
+    }
+
     function applyMode() {
         // Remember the current windowed rectangle unless we're already
         // showing fullscreen (whose geometry is the screen cover).

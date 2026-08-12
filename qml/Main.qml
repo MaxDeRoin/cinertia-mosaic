@@ -17,7 +17,10 @@ ApplicationWindow {
     Storage { id: storage }
     PowerGuard { keepAwake: window.neverSleep }
     // Hides the mouse over Mosaic's windows after 3 s of no movement.
-    CursorGuard { id: cursorGuard; enabled: window.hideCursor }
+    // id is distinct from the "cursorGuard" properties on the canvas and
+    // output windows — naming them the same made those bindings resolve to
+    // themselves (a QML binding loop) instead of this object.
+    CursorGuard { id: cursorGuardCtl; enabled: window.hideCursor }
     // Asks GitHub once, a moment after startup, whether a newer release
     // exists. Notify-only: the notice appears in Settings and About and
     // links to the releases page — nothing installs itself (show machines).
@@ -318,6 +321,29 @@ ApplicationWindow {
     onFsScreenIndexChanged: {
         if (displayMode === 1)
             Qt.callLater(applyDisplayMode)
+    }
+
+    // Startup re-assert: at login/session restore the first apply can run
+    // before the window is mapped or before macOS has brought up all
+    // displays — the OS then places the window on the wrong screen and the
+    // menu-bar cover never engages. Re-apply (idempotent) once visible,
+    // when the display list changes, and once more shortly after startup.
+    onVisibleChanged: {
+        if (window.visible && displayMode === 1)
+            Qt.callLater(applyDisplayMode)
+    }
+    Connections {
+        target: Qt.application
+        function onScreensChanged() {
+            if (window.displayMode === 1)
+                Qt.callLater(window.applyDisplayMode)
+        }
+    }
+    Timer {
+        interval: 1500
+        running: window.displayMode === 1
+        repeat: false
+        onTriggered: window.applyDisplayMode()
     }
 
     // Windows recreates the native window when its style flags change and
@@ -1180,7 +1206,7 @@ ApplicationWindow {
             statusDots: window.statusDots
             tileBorders: window.tileBorders
             tileControls: window.tileControls
-            cursorGuard: cursorGuard
+            cursorGuard: cursorGuardCtl
             availableSources: finder.sources
             moveWindowOnDrag: window.displayMode === 2
             focusTarget: keyCatcher
@@ -1215,7 +1241,7 @@ ApplicationWindow {
             statusDots: window.statusDots
             tileBorders: window.tileBorders
             tileControls: window.tileControls
-            cursorGuard: cursorGuard
+            cursorGuard: cursorGuardCtl
             availableSources: finder.sources
             appQuitting: window.quitting
             onCloseRequested: window.removeOutput(index)

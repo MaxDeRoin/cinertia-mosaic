@@ -73,6 +73,10 @@ int main(int argc, char *argv[])
         mdns->start(QStringLiteral("/usr/bin/dns-sd"),
                     {QStringLiteral("-B"), QStringLiteral("_ndi._tcp"),
                      QStringLiteral("local.")});
+        QObject::connect(&app, &QCoreApplication::aboutToQuit, mdns, [mdns]() {
+            mdns->kill();
+            mdns->waitForFinished(500);
+        });
     }
 
     int result = 1;
