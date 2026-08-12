@@ -29,20 +29,20 @@ reboot cycles with Mosaic in the login items, NDI Video Monitor keeps
 working, fullscreen restores edge-to-edge on the right display with no
 menu bar.
 
-**Note for the Windows session — building 0.7.0 on the PC:** pull
-master and rebuild; version bumps (CMake/installer/.rc) are already
-committed. Everything in 0.6.6→0.7.0 is shared QML/C++ or isolated
-macOS-only code — the Windows paths are unchanged (native fullscreen
-dance kept verbatim; `MacWindow.cpp` compiles as a no-op; the fullscreen
-re-assert hooks are idempotent and harmless on Windows). What Windows
-GAINS: the "Show tile controls" setting (0.6.6), the tile-hover
-cursor-position fallback (0.6.6, cross-platform), and `FSSCREEN` (0.7.0).
-Note v0.6.6 was released macOS-only, so the last Windows installer is
-0.6.5 — build `Mosaic-Setup-0.7.0.exe`, verify the fullscreen monitor
-picker still works on Windows (the code was restructured around a
-platform guard), attach the installer + guide PDF to the v0.7.0 release.
-The Companion module is unchanged (0.1.1) but `FSSCREEN` is available
-for a future module update.
+**0.7.0 is complete on both platforms (Windows verified 2026-08-12).**
+The Windows build was tested against live sources: fullscreen monitor
+picking from Settings and the canvas ⋯ menu, session restore onto the
+right monitors, the "Show tile controls" setting, the hover-bar
+cursor-position fallback, and FSSCREEN over TCP. All four downloads are
+on the v0.7.0 release (installer, dmg, guide PDF, Companion module).
+Windows build note for future sessions: after pulling a new C++ class
+that QML uses (QML_ELEMENT), the Visual Studio generator may leave
+`build/mosaic_qmltyperegistrations.cpp` stale — the app then dies at
+launch with "<Class> is not a type". Fix: delete that file (and the
+`*metatypes*` files) in `build/` and rebuild. This has now happened for
+both StartupLauncher (0.6.5) and MacWindow (0.7.0). The Companion
+module is unchanged (0.1.1) but `FSSCREEN` is available for a future
+module update.
 
 **Previous (diagnostic line): 0.6.8.**
 Key operational lesson: the Info.plist fix alone was NOT enough on
