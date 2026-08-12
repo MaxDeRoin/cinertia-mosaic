@@ -116,6 +116,11 @@ Window {
         if (windowMode === 1) {
             const screens = Qt.application.screens
             const target = screens[Math.min(screenIndex, screens.length - 1)]
+            console.log("applyMode: fullscreen output '" + outputName
+                        + "' -> screen", screenIndex, "of", screens.length,
+                        "(" + target.name + " at",
+                        target.virtualX + "," + target.virtualY,
+                        target.width + "x" + target.height + ")")
             fsActive = true
             if (Qt.platform.os === "windows") {
                 // Native fullscreen; dip through windowed so a monitor
@@ -491,7 +496,12 @@ Window {
                         required property int index
                         label: String(index + 1)
                         active: out.screenIndex === index
-                        onActivated: out.screenPicked(index)
+                        onActivated: {
+                            console.log("monitor picker (output '" + out.outputName
+                                        + "'): clicked screen", index,
+                                        "windowMode", out.windowMode)
+                            out.screenPicked(index)
+                        }
                     }
                 }
             }
