@@ -15,6 +15,14 @@ MacWindow::MacWindow(QObject *parent)
 {
 }
 
+// The presentation options we want right now, from the covering set.
+static NSApplicationPresentationOptions desiredOptions()
+{
+    return s_covering.isEmpty()
+        ? NSApplicationPresentationDefault
+        : (NSApplicationPresentationHideMenuBar | NSApplicationPresentationHideDock);
+}
+
 void MacWindow::setCoversMenuBar(QQuickWindow *window, bool on)
 {
     if (!window)
@@ -27,14 +35,38 @@ void MacWindow::setCoversMenuBar(QQuickWindow *window, bool on)
     NSView *view = reinterpret_cast<NSView *>(window->winId());
     NSWindow *nsWindow = view ? [view window] : nil;
 
+    // Presentation options only take effect for the ACTIVE application. When
+    // Mosaic is launched at login, another app holds focus, so the menu bar
+    // stayed visible over the fullscreen cover. Re-assert the options every
+    // time the app becomes active — and, when covering, bring Mosaic to the
+    // front (a fullscreen multiviewer should own the display it covers).
+    static bool observerInstalled = false;
+    if (!observerInstalled) {
+        observerInstalled = true;
+        [[NSNotificationCenter defaultCenter]
+            addObserverForName:NSApplicationDidBecomeActiveNotification
+                        object:NSApp
+                         queue:[NSOperationQueue mainQueue]
+                    usingBlock:^(NSNotification *) {
+                        NSApp.presentationOptions = desiredOptions();
+                    }];
+    }
+    if (on && ![NSApp isActive])
+        [NSApp activateIgnoringOtherApps:YES];
+
     // Presentation options are application-wide, so hide the menu bar and dock
     // while any output is fullscreen and restore them when none is. (Hiding the
     // menu bar requires also hiding the dock.)
-    NSApplicationPresentationOptions options = s_covering.isEmpty()
-        ? NSApplicationPresentationDefault
-        : (NSApplicationPresentationHideMenuBar | NSApplicationPresentationHideDock);
-    NSApp.presentationOptions = options;
+    NSApp.presentationOptions = desiredOptions();
 
+    if (nsWindow) {
+        // Presentation options only work while the app is active, and a
+        // login-launched app cannot activate itself on modern macOS — so the
+        // menu bar stayed visible over covers created at startup. Drawing
+        // above the menu bar's window level covers it regardless of focus
+        // (the right behavior for a dedicated output display anyway).
+        nsWindow.level = on ? NSMainMenuWindowLevel + 1 : NSNormalWindowLevel;
+    }
     if (on && nsWindow) {
         // AppKit "constrains" a borderless window that spans the whole screen
         // (it reserves room for the menu bar/dock), leaving a ~20px gap around
