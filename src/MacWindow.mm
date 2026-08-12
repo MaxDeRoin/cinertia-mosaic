@@ -24,6 +24,9 @@ void MacWindow::setCoversMenuBar(QQuickWindow *window, bool on)
     else
         s_covering.remove(window);
 
+    NSView *view = reinterpret_cast<NSView *>(window->winId());
+    NSWindow *nsWindow = view ? [view window] : nil;
+
     // Presentation options are application-wide, so hide the menu bar and dock
     // while any output is fullscreen and restore them when none is. (Hiding the
     // menu bar requires also hiding the dock.)
@@ -31,4 +34,17 @@ void MacWindow::setCoversMenuBar(QQuickWindow *window, bool on)
         ? NSApplicationPresentationDefault
         : (NSApplicationPresentationHideMenuBar | NSApplicationPresentationHideDock);
     NSApp.presentationOptions = options;
+
+    if (on && nsWindow) {
+        // AppKit "constrains" a borderless window that spans the whole screen
+        // (it reserves room for the menu bar/dock), leaving a ~20px gap around
+        // the cover. Once the menu bar is hidden, force the frame to the full
+        // screen at the AppKit level — after a spin of the main queue so the
+        // presentation-options change has settled.
+        nsWindow.collectionBehavior |= NSWindowCollectionBehaviorFullScreenAuxiliary;
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (nsWindow.screen)
+                [nsWindow setFrame:nsWindow.screen.frame display:YES];
+        });
+    }
 }
