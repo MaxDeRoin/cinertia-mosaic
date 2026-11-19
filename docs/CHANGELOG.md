@@ -20,6 +20,17 @@ Vizrt NDI AB.
   display was noticed.
 - **The main window remembers its mode, fullscreen monitor and
   position** across restarts (it used to always start windowed).
+- **No more memory spikes when the screen side is held up.** Every video
+  frame used to be queued for display, so whenever drawing paused (a TV
+  going into standby, a display reconfiguring, a busy moment) frames piled
+  up at the source's frame rate — about 84 MB per second with three 1080p60
+  sources, measured — and could push the Mac into gigabytes, looking like a
+  memory leak. Each tile now keeps only its newest waiting frame; memory
+  stays flat through the same pause. (A full leak hunt — code review plus
+  hours of measurements with live video, a sleeping display and hundreds of
+  profile switches — found no true leak.)
+- **Remote-control connections that drop without closing** (cable pulled,
+  controller powered off) are now detected and cleaned up.
 
 ### New
 - **Disconnected displays:** a fullscreen canvas whose display is

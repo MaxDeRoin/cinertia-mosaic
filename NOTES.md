@@ -39,6 +39,22 @@ Windows build note: new QML type `Displays` — if the app dies with
 "Displays is not a type", delete the stale `build/mosaic_qmltyperegistrations.cpp`
 (see below).
 
+**Memory "leak" on the show Mac (2026-11-19): spikes, now capped.** A full
+hunt found no true leak: five-lens code review (every finding verified) plus
+measurements on the MacBook with three local 1080p60 test senders — flat for
+minutes visible, hidden behind other windows and with the display asleep;
+200 profile switches (~700 receiver create/destroy) left memory lower and
+`leaks` reported < 1 KB. The real problem: each video frame (~4 MB) was
+queued to the GUI thread as its own event, so any GUI/render stall (display
+reconfiguring, Metal waiting for a drawable) piled frames up at frame rate —
+a 10 s stall took the old build from 393 MB to 1.19 GB (released only
+minutes later). Fix: `FrameMailbox` in `src/ndi/NdiVideoItem.h` — one
+waiting frame per tile, at most one wake-up queued; the same stall now stays
+flat. Also `RemoteControl`: TCP keep-alive and dropping clients that stop
+reading. Test tooling used: a tiny NDI test sender (UYVY 1080p60 moving bar,
+built against the SDK) and a remote-control stall hook in throwaway builds
+only.
+
 **Mac build on the MacBook (2026-11-19):** tools live in
 `~/Developer/Mosaic-Mac/` (Homebrew CMake + Ninja, Qt 6.8.3 via aqtinstall,
 NDI SDK 6.4 at `/Library/NDI SDK for Apple`). Build with
