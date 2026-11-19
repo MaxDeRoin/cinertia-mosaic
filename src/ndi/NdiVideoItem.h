@@ -55,6 +55,9 @@ signals:
     // nothing received yet). Tied to the connection, not picture motion, so
     // a static source stays healthy. (1 = stalling is no longer emitted.)
     void healthChanged(int health);
+    // Whether the receiver holds a connection to a sender at all (frames or
+    // not) — what the network watchdog needs.
+    void connectedChanged(bool connected);
     void audioLevels(qreal left, qreal right);
 
 private:
@@ -79,6 +82,7 @@ private:
     qint64 m_lastFrameMs = 0;     // 0 = nothing received yet
     qint64 m_lastConnCheckMs = -10000;
     int m_connections = 0;
+    bool m_connected = false;
     int m_health = -1;
     QString m_status;
     QString m_streamInfo;
@@ -107,6 +111,8 @@ class NdiVideoItem : public QQuickItem
     // (connected), 2 = down (no connection / still connecting). Based on the
     // NDI connection, so a static picture stays healthy.
     Q_PROPERTY(int health READ health NOTIFY healthChanged)
+    // True while connected to a sender (even before the first frame).
+    Q_PROPERTY(bool connected READ connected NOTIFY connectedChanged)
     Q_PROPERTY(qreal viewRotation READ viewRotation NOTIFY viewChanged)
     Q_PROPERTY(bool cropped READ cropped NOTIFY viewChanged)
     // Alt+scroll rotation. On by default; the future settings menu gets a
@@ -134,6 +140,7 @@ public:
     void setSourceName(const QString &name);
     QString status() const { return m_status; }
     int health() const { return m_health; }
+    bool connected() const { return m_connected; }
     QSize videoSize() const { return m_videoSize; }
     qreal zoomLevel() const { return m_zoom; }
     qreal viewRotation() const { return m_rotation; }
@@ -159,6 +166,9 @@ public:
     Q_INVOKABLE void rotateBy(qreal degrees);
     Q_INVOKABLE void applyCropFromItemRect(const QRectF &itemRect);
     Q_INVOKABLE void clearCrop();
+    // Drop and re-create the NDI receiver for the current source (used when
+    // macOS was blocking local network access and may have stopped).
+    Q_INVOKABLE void reconnect();
 
     // Snapshot/restore of the whole view for profiles and session restore.
     Q_INVOKABLE QVariantMap viewState() const;
@@ -168,6 +178,7 @@ signals:
     void sourceNameChanged();
     void statusChanged();
     void healthChanged();
+    void connectedChanged();
     void viewChanged();
     void wheelRotateEnabledChanged();
     void videoSizeChanged();
@@ -192,6 +203,7 @@ private:
     void onFrame(const QImage &frame, int uyvyWidth);
     void onStatus(const QString &status);
     void onHealth(int health);
+    void onConnected(bool connected);
     void onAudioLevels(qreal left, qreal right);
     QRectF fitRect() const;          // letterboxed quad, unrotated
     qreal rotationFitScale() const;  // rescales the rotated quad to fit
@@ -209,6 +221,7 @@ private:
     QString m_sourceName;
     QString m_status;
     int m_health = 2; // down until the first frame arrives
+    bool m_connected = false;
     QImage m_pendingFrame;
     int m_pendingUyvyWidth = 0;  // 0 = BGRA frame
     bool m_nodeIsUyvy = false;   // which node type the scene graph holds

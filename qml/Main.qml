@@ -156,6 +156,9 @@ ApplicationWindow {
                     profile: window.currentProfile,
                     mode: window.modeName(),
                     tiles: canvas.tileCount,
+                    // true while sources are visible but none can connect
+                    // (macOS blocking local network access — see watchdog)
+                    ndiBlocked: window.ndiBlocked,
                     displays: displayMgr.screens.length,
                     // Canvases waiting for their fullscreen display.
                     missing: window.missingCanvasNames()
@@ -233,6 +236,84 @@ ApplicationWindow {
             }
             remote.reply(ok ? "OK" : "ERR " + command)
         }
+    }
+
+    // ------------------------------------------ NDI network watchdog
+    // A known macOS issue: right after a restart, macOS can cache a wrong
+    // "deny" for an app's Local Network access and keep blocking it until
+    // the app's Local Network switch is turned off and on (quitting and
+    // reopening does not help). NDI discovery still works — it is done by a
+    // system service — but no receiver can connect. The show Mac's 0.6.8 log
+    // shows exactly that after two restarts. Mosaic can't clear the block
+    // itself, so it detects it, says how to fix it, and keeps retrying so
+    // tiles come back the moment access returns.
+    property bool ndiBlocked: false
+    property int ndiStuckSecs: 0
+    // The cached deny is there from launch (it happens at boot). Once any
+    // tile has connected, a later "nothing connects" is a sender or network
+    // outage — the tiles' red dots show that; it must never be blamed on
+    // macOS mid-show.
+    property bool ndiEverConnected: false
+    function allTileItems() {
+        let tiles = canvas.allTiles()
+        for (let i = 0; i < outputModel.count; i++) {
+            const w = outputInst.objectAt(i)
+            if (w)
+                tiles = tiles.concat(w.canvas.allTiles())
+        }
+        return tiles
+    }
+    function checkNdiAccess() {
+        const visible = finder.sources
+        let connected = 0
+        const stuck = []
+        const tiles = allTileItems()
+        for (let i = 0; i < tiles.length; i++) {
+            const t = tiles[i]
+            if (!t.sourceName)
+                continue
+            if (t.connected)
+                connected++
+            else if (visible.indexOf(t.sourceName) >= 0)
+                stuck.push(t)
+        }
+        // Any connected tile, or nothing visible to connect to: not this.
+        if (connected > 0 || stuck.length === 0) {
+            ndiStuckSecs = 0
+            if (connected > 0)
+                ndiEverConnected = true
+            if (ndiBlocked) {
+                ndiBlocked = false
+                if (connected > 0) {
+                    displayMgr.logEvent("NDI: connections working again")
+                    remote.broadcast("EVENT NDI OK")
+                } else {
+                    // Cleared only because nothing visible is left to try.
+                    displayMgr.logEvent("NDI: no visible sources left to check")
+                    remote.broadcast("EVENT NDI IDLE")
+                }
+            }
+            return
+        }
+        ndiStuckSecs += 5
+        if (!ndiBlocked && !ndiEverConnected && ndiStuckSecs >= 20) {
+            ndiBlocked = true
+            displayMgr.logEvent("NDI: " + stuck.length + " tile(s) can see their source"
+                                + " but none can connect — local network access"
+                                + " looks blocked")
+            remote.broadcast("EVENT NDI BLOCKED")
+        }
+        // Re-create the receivers now and then while blocked, so they pick
+        // up access as soon as it is restored.
+        if (ndiBlocked && ndiStuckSecs % 30 === 0)
+            for (let i = 0; i < stuck.length; i++)
+                stuck[i].reconnect()
+    }
+    Timer {
+        interval: 5000
+        repeat: true
+        running: true
+        onTriggered: window.checkNdiAccess()
     }
 
     // ------------------------------------------------------ app state
@@ -2308,5 +2389,68 @@ ApplicationWindow {
             }
         }
     }
-}
 
+    // Shown while the NDI watchdog finds sources visible but unconnectable.
+    Rectangle {
+        id: ndiBanner
+        visible: window.ndiBlocked
+        z: 1000
+        anchors.top: parent.top
+        anchors.topMargin: 12
+        anchors.horizontalCenter: parent.horizontalCenter
+        width: Math.min(720, parent.width - 32)
+        height: bannerCol.implicitHeight + 24
+        radius: 4
+        color: "#2a2010"
+        border.width: 1
+        border.color: "#d8a040"
+
+        // Swallow clicks, drags, hover and scrolling, so nothing under the
+        // banner (tiles, sidebar) reacts to them. Declared first, so the
+        // button below stays on top.
+        MouseArea {
+            anchors.fill: parent
+            hoverEnabled: true
+            acceptedButtons: Qt.AllButtons
+            onWheel: wheel => wheel.accepted = true
+        }
+
+        Column {
+            id: bannerCol
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.margins: 12
+            spacing: 8
+
+            Text {
+                width: parent.width
+                wrapMode: Text.WordWrap
+                color: "#f0d090"
+                font.pixelSize: 14
+                font.bold: true
+                text: "Mosaic can see the NDI® sources but can't connect to any of them."
+            }
+            Text {
+                width: parent.width
+                wrapMode: Text.WordWrap
+                color: "#d8d8dc"
+                font.pixelSize: 12
+                text: Qt.platform.os === "osx"
+                    ? "macOS is most likely blocking Mosaic's local network access. If macOS just"
+                      + " asked whether Mosaic may find devices on your local network, click Allow."
+                      + " Otherwise this is a known macOS issue after a restart — fix: System Settings"
+                      + " → Privacy & Security → Local Network → turn Mosaic off, then on again."
+                      + " Mosaic reconnects by itself."
+                    : "Something is blocking Mosaic's network connections — check that Windows"
+                      + " Firewall allows Mosaic on this network. Mosaic keeps retrying."
+            }
+            ToolBtn {
+                visible: Qt.platform.os === "osx"
+                label: "Open Local Network settings"
+                onActivated: Qt.openUrlExternally(
+                    "x-apple.systempreferences:com.apple.preference.security?Privacy_LocalNetwork")
+            }
+        }
+    }
+}

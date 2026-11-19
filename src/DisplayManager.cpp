@@ -477,6 +477,18 @@ QVariantMap DisplayManager::resolve(const QVariant &keyVariant,
     return fallback();
 }
 
+void DisplayManager::logEvent(const QString &text) const
+{
+    const QString dir =
+        QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    QDir().mkpath(dir);
+    QFile file(dir + QStringLiteral("/displays.log"));
+    if (!file.open(QIODevice::Append | QIODevice::Text))
+        return;
+    file.write(QDateTime::currentDateTime().toString(Qt::ISODate).toUtf8()
+               + " " + text.toUtf8() + "\n");
+}
+
 void DisplayManager::logLayout(const QString &why) const
 {
     // A small rolling log of every settled display layout with each

@@ -122,6 +122,11 @@ void NdiReceiveWorker::shutdown()
     }
     m_streamInfo.clear();
     m_lastTimestamp = 0;
+    m_connections = 0;
+    if (m_connected) {
+        m_connected = false;
+        emit connectedChanged(false);
+    }
     m_levelLeft = 0.0f;
     m_levelRight = 0.0f;
     // Free a frame still waiting to be shown.
@@ -244,6 +249,11 @@ void NdiReceiveWorker::updateHealth()
     if (health != m_health) {
         m_health = health;
         emit healthChanged(health);
+    }
+    const bool connected = m_connections > 0;
+    if (connected != m_connected) {
+        m_connected = connected;
+        emit connectedChanged(connected);
     }
 }
 
@@ -383,6 +393,8 @@ NdiVideoItem::NdiVideoItem()
             this, &NdiVideoItem::onStatus, Qt::QueuedConnection);
     connect(m_worker, &NdiReceiveWorker::healthChanged,
             this, &NdiVideoItem::onHealth, Qt::QueuedConnection);
+    connect(m_worker, &NdiReceiveWorker::connectedChanged,
+            this, &NdiVideoItem::onConnected, Qt::QueuedConnection);
     connect(m_worker, &NdiReceiveWorker::audioLevels,
             this, &NdiVideoItem::onAudioLevels, Qt::QueuedConnection);
     m_thread.start();
@@ -427,6 +439,11 @@ void NdiVideoItem::setSourceName(const QString &name)
     resetView();
 
     emit sourceNameChanged();
+}
+
+void NdiVideoItem::reconnect()
+{
+    updateConnection(true); // no-op without a source
 }
 
 void NdiVideoItem::resetView()
@@ -798,6 +815,14 @@ void NdiVideoItem::onHealth(int health)
         return;
     m_health = health;
     emit healthChanged();
+}
+
+void NdiVideoItem::onConnected(bool connected)
+{
+    if (connected == m_connected)
+        return;
+    m_connected = connected;
+    emit connectedChanged();
 }
 
 void NdiVideoItem::onStatus(const QString &status)

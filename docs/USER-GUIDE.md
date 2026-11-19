@@ -39,6 +39,9 @@ First launch:
    dialog, turn it on later in **System Settings → Privacy & Security →
    Local Network**.
 
+> **Tiles black after a restart?** See [Troubleshooting](#troubleshooting)
+> — a known macOS issue can block Mosaic's network access after a restart.
+
 Everything in this guide works the same on both platforms. Where a
 keyboard shortcut says **Ctrl** or **Alt**, use **⌘ Cmd** / **⌥ Option**
 on the Mac.
@@ -439,14 +442,59 @@ commands on buttons — one per line, case-insensitive:
 | `OUTSCREEN 2 Right TV` | send the canvas named "Right TV" to monitor 2 (left to right) — fixes a display assignment without touching the machine |
 | `PING` | connectivity check |
 | `PROFILES?` | replies `PROFILES ["Show A", …]` |
-| `STATUS?` | replies `STATUS {"profile":…,"mode":…,"tiles":…,"displays":…,"missing":[…]}` — `missing` lists canvases waiting for a disconnected display |
+| `STATUS?` | replies `STATUS {"profile":…,"mode":…,"tiles":…,"ndiBlocked":…,"displays":…,"missing":[…]}` — `missing` lists canvases waiting for a disconnected display; `ndiBlocked` is true while sources are visible but none can connect |
 
 Mosaic replies `OK`/`ERR …` per command and **pushes state changes** to
 all connected clients (`EVENT PROFILE …`, `EVENT PROFILES …`,
-`EVENT MODE …`, and `EVENT DISPLAY <canvas> MISSING|OK` when a
-canvas's display disconnects or returns) no matter what caused them — the foundation for
+`EVENT MODE …`, `EVENT DISPLAY <canvas> MISSING|OK` when a
+canvas's display disconnects or returns, and `EVENT NDI BLOCKED|OK` when
+network access is blocked or restored — see Troubleshooting) no matter what caused them — the foundation for
 active-profile button feedback. If Companion runs on another machine,
 allow Mosaic through Windows Firewall when prompted.
+
+---
+
+## Troubleshooting
+
+### Tiles stay black after the Mac restarts (macOS)
+
+**What you see:** the sources are listed in the sidebar, but every tile
+stays black with a red status dot, and Mosaic shows a banner: *"Mosaic
+can see the NDI® sources but can't connect to any of them."* Quitting and
+reopening Mosaic doesn't help.
+
+**Why:** a known macOS issue. Right after a restart, macOS can wrongly
+decide that an app may not use the local network and keep blocking it.
+Finding sources still works (macOS does that part), but connecting to
+them is blocked. It is most likely on a Mac that starts Mosaic at login.
+
+**Quick fix (each time it happens):** click **Open Local Network
+settings** on the banner (or go to **System Settings → Privacy & Security
+→ Local Network**), turn **Mosaic off, then on again**. The tiles come
+back within a few seconds — Mosaic keeps retrying by itself. If they
+don't, quit and reopen Mosaic. There is no need to reinstall.
+
+**Permanent fix for a dedicated show Mac (macOS 15.5 or later):** tell
+macOS that the NDI network may always be reached, by every app. In
+Terminal (it asks for the Mac's password), with your NDI network's
+address range in place of `192.168.10.0/24`:
+
+```
+sudo defaults write com.apple.network.local-network AllowedEthernetLocalNetworkAddresses -array "192.168.10.0/24"
+```
+
+If the Mac reaches NDI over Wi-Fi, run it again with
+`AllowedWiFiLocalNetworkAddresses`. Then restart the Mac. To check it:
+`defaults read com.apple.network.local-network`. To undo it: `sudo
+defaults delete com.apple.network.local-network`, then restart. This is
+Apple's documented setting (Technote TN3179); it relaxes the local-network
+privacy check for that address range only, so use it on dedicated show
+machines.
+
+Mosaic logs when this happens (and when it clears) in `displays.log` in
+`~/Library/Application Support/Cinertia Systems/Mosaic/`, and reports it
+over remote control (`STATUS?` → `ndiBlocked`, `EVENT NDI BLOCKED|OK`) so a
+Stream Deck button can show it.
 
 ---
 

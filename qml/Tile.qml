@@ -62,6 +62,10 @@ Item {
     // the canvas shows the snap grid while any tile has this set.
     property bool snapDragActive: false
     readonly property string status: video.status
+    // Whether the receiver is connected to a sender (frames or not) and a
+    // way to re-create it — for the main window's network watchdog.
+    readonly property bool connected: video.connected
+    function reconnect() { video.reconnect() }
 
     function viewState() { return video.viewState() }
     function setViewState(s) { video.setViewState(s) }

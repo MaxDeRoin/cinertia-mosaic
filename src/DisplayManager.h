@@ -91,6 +91,9 @@ public:
     Q_INVOKABLE QScreen *screenForRect(const QRectF &rect) const;
     // Human-readable label: "BMD HDMI (1) · 2160×3840 portrait".
     Q_INVOKABLE QString describe(QScreen *screen) const;
+    // Add a timestamped line to the same rolling log (displays.log) — for
+    // other show-day events worth diagnosing later (e.g. NDI blocked).
+    Q_INVOKABLE void logEvent(const QString &text) const;
 
 signals:
     void layoutChanged();

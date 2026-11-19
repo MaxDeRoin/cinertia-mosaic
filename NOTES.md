@@ -55,6 +55,28 @@ reading. Test tooling used: a tiny NDI test sender (UYVY 1080p60 moving bar,
 built against the SDK) and a remote-control stall hook in throwaway builds
 only.
 
+**NDI broken after the show Mac restarts (2026-11-19): macOS bug, now
+detected.** The 0.6.8 log shows it after both Nov 7 restarts: the finder
+saw all sources but no receiver ever connected (connections=0 forever,
+even after relaunching; reinstalling fixed it until the next restart).
+Researched (Apple TN3179 + DTS forum threads 809211, 769037, 792453,
+FB21858319): macOS can cache a wrong Local Network "deny" after boot and
+keeps blocking the app until its Local Network switch is toggled; relaunch
+doesn't clear it; login-item launch and ad-hoc signing make it likelier.
+Discovery still works because libndi browses through the system's
+mDNSResponder (`nm -u` shows DNSServiceBrowse/Resolve/GetAddrInfo) —
+earlier notes saying NDI "does its own mDNS" were wrong — while receiver
+sockets are Mosaic's own and get blocked. Mosaic can't clear the block, so
+Main.qml now has a watchdog: no tile connected while ≥1 tile's source is
+visible for 20 s → banner with the fix, `displays.log` entry, STATUS
+`ndiBlocked`, `EVENT NDI BLOCKED/OK`, and receivers re-created every 30 s
+until a tile connects. Tested with fake NDI announcements (dns-sd -R
+"<HOST> (Ghost n)" _ndi._tcp … groups=public — that TXT record is what
+libndi needs to list them). User-side permanent fix (TN3179, macOS 15.5+):
+`sudo defaults write com.apple.network.local-network
+AllowedEthernetLocalNetworkAddresses -array "<subnet>/24"` + restart.
+Long-term: Developer ID signing + notarization (stable identity).
+
 **Mac build on the MacBook (2026-11-19):** tools live in
 `~/Developer/Mosaic-Mac/` (Homebrew CMake + Ninja, Qt 6.8.3 via aqtinstall,
 NDI SDK 6.4 at `/Library/NDI SDK for Apple`). Build with

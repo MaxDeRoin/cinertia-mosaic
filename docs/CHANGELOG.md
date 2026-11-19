@@ -29,6 +29,16 @@ Vizrt NDI AB.
   stays flat through the same pause. (A full leak hunt — code review plus
   hours of measurements with live video, a sleeping display and hundreds of
   profile switches — found no true leak.)
+- **Mosaic now tells you when macOS blocks its network access.** After a
+  restart, macOS can wrongly block an app's local network access (a known
+  macOS issue): sources still show in the list but no tile can connect,
+  and only switching Mosaic's Local Network permission off and on (or
+  reinstalling) brought them back. Mosaic now detects this, shows a banner
+  with the fix and an **Open Local Network settings** button, keeps
+  retrying so tiles return as soon as access is restored, logs it, and
+  reports it over remote control (`STATUS?` `ndiBlocked`, `EVENT NDI
+  BLOCKED|OK`). The user guide's new Troubleshooting section has a
+  permanent fix for show Macs.
 - **Remote-control connections that drop without closing** (cable pulled,
   controller powered off) are now detected and cleaned up.
 
