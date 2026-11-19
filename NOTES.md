@@ -12,7 +12,14 @@ approval from the NDI team, so everything internal uses this codename for now.
 Easy to rename later.
 
 ## Current status
-**In progress: 0.7.1 — displays remembered by identity (2026-11-19, Mac
+**0.7.1 — published as a macOS pre-release (v0.7.1, 2026-11-19, not
+latest; Mosaic-0.7.1.dmg from commit 5f026cc on branch display-identity,
+pull request #1).** Show Mac tested: Always allow the NDI network on, several
+restarts, working. Remaining: Windows build check on the PC, merge PR #1,
+then promote v0.7.1 to a full release with the Windows installer and guide
+PDF (and mark it latest).
+
+**0.7.1 — displays remembered by identity (2026-11-19, Mac
 session).** Fixes the show Mac's TVs swapping after a reboot and covers not
 refitting when a display changes. Windows used to store their fullscreen
 display only as an index into the OS display list, which macOS reorders
