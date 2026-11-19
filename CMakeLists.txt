@@ -82,6 +82,7 @@ qt_add_qml_module(Mosaic
         qml/WindowPlacement.qml
     RESOURCES
         resources/mosaic-logo.png
+        resources/localnetwork.sh
     SOURCES
         src/Storage.h
         src/Storage.cpp
@@ -105,6 +106,8 @@ qt_add_qml_module(Mosaic
         src/DisplayIdentity.h
         src/DisplayManager.h
         src/DisplayManager.cpp
+        src/LocalNetworkAccess.h
+        src/LocalNetworkAccess.cpp
         ${MOSAIC_PLATFORM_WINDOW}
 )
 
@@ -128,7 +131,8 @@ target_link_libraries(Mosaic PRIVATE Qt6::Quick Qt6::Network "${NDI_SDK_LIB}")
 if(APPLE)
     target_link_libraries(Mosaic PRIVATE
         "-framework IOKit" "-framework CoreFoundation" "-framework AppKit"
-        "-framework CoreGraphics" "-framework ColorSync")
+        "-framework CoreGraphics" "-framework ColorSync"
+        "-framework SystemConfiguration")
 endif()
 
 # The NDI runtime ships inside the app — never the system path (license terms).

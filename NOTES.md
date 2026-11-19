@@ -72,9 +72,23 @@ visible for 20 s → banner with the fix, `displays.log` entry, STATUS
 `ndiBlocked`, `EVENT NDI BLOCKED/OK`, and receivers re-created every 30 s
 until a tile connects. Tested with fake NDI announcements (dns-sd -R
 "<HOST> (Ghost n)" _ndi._tcp … groups=public — that TXT record is what
-libndi needs to list them). User-side permanent fix (TN3179, macOS 15.5+):
-`sudo defaults write com.apple.network.local-network
-AllowedEthernetLocalNetworkAddresses -array "<subnet>/24"` + restart.
+libndi needs to list them). Permanent fix (TN3179, macOS 15.5+) is now a Settings switch, "Always
+allow the NDI network" (`src/LocalNetworkAccess`, QML `localNet`): detects
+the connected IPv4 networks (en* interfaces; Ethernet vs Wi-Fi via
+SystemConfiguration), runs `resources/localnetwork.sh` as root through
+osascript "with administrator privileges" (the macOS admin prompt) to add
+or remove them in `com.apple.network.local-network`
+Allowed{Ethernet,WiFi}LocalNetworkAddresses, keeping other entries.
+Stored in root's preferences (check: `sudo defaults read
+com.apple.network.local-network`), so Mosaic can't read it back: the
+script prints ADDED/HAD per range and Mosaic records only those
+(QSettings localNetwork/*) — off removes only ADDED ranges, so
+pre-existing entries are never touched — plus kern.bootsessionuuid to show
+"restart to apply" until the next boot. "Add this network" covers a new
+venue's network while on. Off by default. Tested end to end (script,
+quoting, process, record, fresh and pre-existing entries) against a
+user-level test domain without the admin prompt; the real switch has not
+been flipped on any machine yet.
 Long-term: Developer ID signing + notarization (stable identity).
 
 **Mac build on the MacBook (2026-11-19):** tools live in

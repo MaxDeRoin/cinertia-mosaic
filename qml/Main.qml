@@ -28,6 +28,9 @@ ApplicationWindow {
     // Start-with-Windows registration. The registry is the source of
     // truth, so the checkbox reads live state rather than session.json.
     StartupLauncher { id: startupLauncher }
+    // macOS 15.5+: the "Always allow the NDI network" setting (see the
+    // NDI network watchdog below and LocalNetworkAccess.h).
+    LocalNetworkAccess { id: localNet }
     // macOS only: lifts a fullscreen window above the menu bar (no-op elsewhere).
     MacWindow { id: macWindow }
     // (id is not "displays": that name is a property on the output windows,
@@ -465,6 +468,8 @@ ApplicationWindow {
     property int fsScreenIndex: 0
     property bool sidebarCollapsed: false
     property bool settingsOpen: false
+    // Re-detect the connected networks for "Always allow the NDI network".
+    onSettingsOpenChanged: if (settingsOpen) localNet.refresh()
 
     onDisplayModeChanged: {
         remote.broadcast("EVENT MODE " + modeName())
@@ -1968,6 +1973,50 @@ ApplicationWindow {
                 checked: window.checkUpdates
                 onToggled: window.checkUpdates = !window.checkUpdates
             }
+            // Show machines (macOS 15.5+): exempt the NDI network from the
+            // per-app Local Network check, which macOS can get stuck on
+            // after a restart. Off unless someone turns it on here; asks
+            // for the Mac's administrator password; applies after restart.
+            CheckRow {
+                visible: localNet.supported
+                label: "Always allow the NDI network"
+                checked: localNet.enabled
+                onToggled: localNet.setEnabled(!localNet.enabled)
+            }
+            Text {
+                visible: localNet.supported
+                width: parent.width
+                wrapMode: Text.WordWrap
+                color: localNet.lastError !== "" ? "#d8a040" : "#8a8a90"
+                font.pixelSize: 11
+                text: {
+                    if (localNet.busy)
+                        return "Waiting for the administrator password…"
+                    if (localNet.lastError !== "")
+                        return localNet.lastError
+                    const nets = localNet.networks.join(", ")
+                    if (localNet.enabled)
+                        return (localNet.restartPending ? "On — restart the Mac to apply. " : "On. ")
+                            + "Any app may reach " + nets + " without the Local Network permission."
+                            + (localNet.uncovered.length > 0
+                               ? " Not included: " + localNet.uncovered.join(", ")
+                                 + " (connected now) — add it below."
+                               : "")
+                    if (localNet.restartPending)
+                        return "Off — restart the Mac to apply."
+                    return nets === ""
+                        ? "For show Macs: stops macOS blocking NDI after a restart. No network found right now."
+                        : "For show Macs: stops macOS blocking NDI after a restart, by letting any app"
+                          + " reach " + nets + ". Needs the Mac's admin password and a restart."
+                }
+            }
+            ToolBtn {
+                // Moved to another network while on: allow that one too.
+                visible: localNet.supported && localNet.enabled
+                         && localNet.uncovered.length > 0 && !localNet.busy
+                label: "Add this network"
+                onActivated: localNet.addCurrent()
+            }
             CheckRow {
                 // Windows-only for now: the macOS equivalent (Login
                 // Items) is not implemented yet, so hide the row there.
@@ -2442,6 +2491,12 @@ ApplicationWindow {
                       + " Otherwise this is a known macOS issue after a restart — fix: System Settings"
                       + " → Privacy & Security → Local Network → turn Mosaic off, then on again."
                       + " Mosaic reconnects by itself."
+                      + (localNet.supported
+                         && (!localNet.enabled || localNet.uncovered.length > 0)
+                         ? (localNet.enabled
+                            ? " This network isn't covered yet: Settings → Add this network."
+                            : " To stop this on a show Mac: Settings → Always allow the NDI network.")
+                         : "")
                     : "Something is blocking Mosaic's network connections — check that Windows"
                       + " Firewall allows Mosaic on this network. Mosaic keeps retrying."
             }

@@ -37,8 +37,12 @@ Vizrt NDI AB.
   with the fix and an **Open Local Network settings** button, keeps
   retrying so tiles return as soon as access is restored, logs it, and
   reports it over remote control (`STATUS?` `ndiBlocked`, `EVENT NDI
-  BLOCKED|OK`). The user guide's new Troubleshooting section has a
-  permanent fix for show Macs.
+  BLOCKED|OK`).
+- **New setting for show Macs: Always allow the NDI network** (macOS
+  15.5+, off by default). Applies Apple's documented exemption for the
+  network the Mac is connected to, so macOS can no longer block NDI after
+  a restart. Asks for the administrator password; takes effect after a
+  restart; switching it off removes exactly what Mosaic added.
 - **Remote-control connections that drop without closing** (cable pulled,
   controller powered off) are now detected and cleaned up.
 

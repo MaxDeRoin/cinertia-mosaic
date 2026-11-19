@@ -354,6 +354,7 @@ locks each window to its actual display.
 | Auto low bandwidth for small tiles | On (default): tiles rendered at proxy size or smaller automatically receive the lighter NDI® proxy stream, reducing CPU and network load. The tile reconnects briefly when it crosses the size threshold |
 | Stream status indicators | On (default): a red dot on a tile that has lost its live connection to the source |
 | Hide mouse when idle | On (default): the mouse cursor disappears over Mosaic after 3 seconds without movement and returns when moved |
+| Always allow the NDI network | macOS 15.5+, off by default. For show Macs: lets any app reach the connected network without the Local Network permission, so macOS can't block NDI after a restart (see Troubleshooting). Needs the admin password and a restart |
 | Show tile borders | On (default): the thin gray border around tiles. Turn off for a clean signage look — the border reads as a glow between tiles on fullscreen displays |
 | Show tile controls | On (default): the top control bar on each tile (drag handle, rotate/crop/fit/reset/close, ☰ menu). Turn off for a clean output display — the bar stays hidden even on mouse-over; turn back on to arrange tiles |
 | Keep canvases when switching profiles | On (default): canvases not saved in the selected profile stay open unchanged. Off: they close |
@@ -474,22 +475,29 @@ settings** on the banner (or go to **System Settings → Privacy & Security
 back within a few seconds — Mosaic keeps retrying by itself. If they
 don't, quit and reopen Mosaic. There is no need to reinstall.
 
-**Permanent fix for a dedicated show Mac (macOS 15.5 or later):** tell
-macOS that the NDI network may always be reached, by every app. In
-Terminal (it asks for the Mac's password), with your NDI network's
-address range in place of `192.168.10.0/24`:
+**Permanent fix for a dedicated show Mac (macOS 15.5 or later):** in
+Settings (⚙), switch on **Always allow the NDI network**, enter the Mac's
+administrator password when macOS asks, then **restart the Mac**. Below
+the switch Mosaic shows which network it allows — the network(s) the Mac
+is connected to right now, e.g. `192.168.10.0/24 (Ethernet)` — and "On —
+restart the Mac to apply" until you restart.
 
-```
-sudo defaults write com.apple.network.local-network AllowedEthernetLocalNetworkAddresses -array "192.168.10.0/24"
-```
+What it does: it tells macOS that addresses on that network don't need
+the per-app Local Network permission, for every app on this Mac — so the
+macOS issue above can't block Mosaic there any more. It changes nothing
+else (network settings, firewall, other networks). It's off by default:
+only Macs where someone switches it on are affected. Switching it off
+(admin password again, then restart) removes exactly what Mosaic added and
+keeps anything else in that macOS setting (including your network, if it
+was already allowed before). Use it on dedicated show machines, not on a
+personal laptop. Turn it on while the Mac is connected to the NDI network.
+At a venue with a different network, Settings says it isn't included —
+click **Add this network** (admin password, then restart).
 
-If the Mac reaches NDI over Wi-Fi, run it again with
-`AllowedWiFiLocalNetworkAddresses`. Then restart the Mac. To check it:
-`defaults read com.apple.network.local-network`. To undo it: `sudo
-defaults delete com.apple.network.local-network`, then restart. This is
-Apple's documented setting (Technote TN3179); it relaxes the local-network
-privacy check for that address range only, so use it on dedicated show
-machines.
+This is Apple's documented setting (Technote TN3179). The equivalent by
+hand, in Terminal: `sudo defaults write com.apple.network.local-network
+AllowedEthernetLocalNetworkAddresses -array "192.168.10.0/24"` (or
+`AllowedWiFiLocalNetworkAddresses` for Wi-Fi), then restart.
 
 Mosaic logs when this happens (and when it clears) in `displays.log` in
 `~/Library/Application Support/Cinertia Systems/Mosaic/`, and reports it
