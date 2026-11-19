@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.21)
 
 # "Mosaic" is a codename only — the product must not ship with "NDI" in its
 # name without approval from the NDI team (NDI SDK license terms).
-project(Mosaic VERSION 0.7.0 LANGUAGES CXX)
+project(Mosaic VERSION 0.7.1 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -10,9 +10,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # macOS needs Objective-C++ for the AppKit window-level helper (MacWindow.mm).
 if(APPLE)
     enable_language(OBJCXX)
-    set(MOSAIC_PLATFORM_WINDOW src/MacWindow.mm)
+    set(MOSAIC_PLATFORM_WINDOW src/MacWindow.mm src/DisplayIdentityMac.mm)
 else()
-    set(MOSAIC_PLATFORM_WINDOW src/MacWindow.cpp)
+    set(MOSAIC_PLATFORM_WINDOW src/MacWindow.cpp src/DisplayIdentityOther.cpp)
 endif()
 
 find_package(Qt6 6.5 REQUIRED COMPONENTS Quick Network ShaderTools)
@@ -79,6 +79,7 @@ qt_add_qml_module(Mosaic
         qml/Tile.qml
         qml/TileCanvas.qml
         qml/OutputWindow.qml
+        qml/WindowPlacement.qml
     RESOURCES
         resources/mosaic-logo.png
     SOURCES
@@ -101,6 +102,9 @@ qt_add_qml_module(Mosaic
         src/StartupLauncher.h
         src/StartupLauncher.cpp
         src/MacWindow.h
+        src/DisplayIdentity.h
+        src/DisplayManager.h
+        src/DisplayManager.cpp
         ${MOSAIC_PLATFORM_WINDOW}
 )
 
@@ -123,7 +127,8 @@ target_link_libraries(Mosaic PRIVATE Qt6::Quick Qt6::Network "${NDI_SDK_LIB}")
 # menu-bar cover (MacWindow) uses AppKit.
 if(APPLE)
     target_link_libraries(Mosaic PRIVATE
-        "-framework IOKit" "-framework CoreFoundation" "-framework AppKit")
+        "-framework IOKit" "-framework CoreFoundation" "-framework AppKit"
+        "-framework CoreGraphics" "-framework ColorSync")
 endif()
 
 # The NDI runtime ships inside the app — never the system path (license terms).

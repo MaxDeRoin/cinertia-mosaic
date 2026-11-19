@@ -264,7 +264,9 @@ program/preview wall on the stage-left TV.
   sources here**, the **window type** (Windowed / Fullscreen /
   Windowless), an exact **size** (width × height, hidden while
   fullscreen — type the numbers and click **Set**), a **monitor
-  picker** (1, 2, 3…), and **Close this canvas** (its tiles and
+  picker** (1, 2, 3… numbered left to right as your displays are
+  arranged, with the picked display's name and size shown underneath),
+  and **Close this canvas** (its tiles and
   connections are dropped). The menu opens upward and floats above the
   tiles, so nothing overlays your pictures until you open it.
 - **Window types per canvas:** every output canvas has the same three
@@ -279,6 +281,47 @@ program/preview wall on the stage-left TV.
 - Everything is remembered — profiles and the session store each
   canvas's tiles, monitor, window type and window position.
   Closing the main window closes the whole app (and saves first).
+
+### Displays are remembered by identity
+
+Mosaic remembers **which display** each window belongs to — the
+display itself, not "monitor 2" — so after a restart or reboot every
+canvas comes back on the same TV even if the computer lists its
+displays in a different order.
+
+- **Restart / reboot:** each fullscreen canvas returns to its own
+  display, and the main window returns to its mode, monitor and
+  position. With Mosaic in the login items, windows wait for the
+  displays to finish coming up and then place themselves.
+- **A display is disconnected** (unplugged, powered off, HDMI standby):
+  its fullscreen canvas hides instead of jumping onto another screen.
+  The sidebar marks it **⚠ name**; click **Show** next to it to see it
+  as a normal window for now (temporary, not saved). STATUS? over remote
+  control lists it under `missing`.
+- **The display comes back:** the canvas returns to it by itself and is
+  resized to fit it exactly — also when it comes back at a different
+  resolution or rotation.
+- If the **main window's** fullscreen display is disconnected, the main
+  window shows as a normal window on a free display (sidebar open) until
+  that display returns.
+- Windowed canvases also remember which display they were on and move
+  back to it when it reconnects. Dragging a window to another display
+  makes that its new home.
+- A replaced display (e.g. a swapped converter of the same make and
+  model) is recognised automatically once the old one has been gone for
+  about two minutes — but only a display no window has used before, so
+  an unplugged TV's picture never moves onto a TV that's in use. If the
+  original comes back, everything returns to it.
+- The canvas's temporary **Show** window can be closed like **Hide** —
+  it doesn't delete the canvas.
+- macOS: Mosaic keeps a small log of every display change
+  (`~/Library/Application Support/Cinertia Systems/Mosaic/displays.log`)
+  for troubleshooting. Windows keeps it in Mosaic's app data folder.
+
+**After updating from 0.7.0 or older:** open each canvas's ⋯ menu and
+click its monitor once, and click the main window's fullscreen monitor
+in settings once. Older versions only saved a monitor number; this
+locks each window to its actual display.
 
 ---
 
@@ -299,7 +342,7 @@ program/preview wall on the stage-left TV.
 | Setting | What it does |
 |---|---|
 | Display mode | Windowed / Fullscreen / Windowless |
-| Fullscreen monitor | Which screen fullscreen uses |
+| Fullscreen monitor | Which display fullscreen uses (numbered left to right; remembered by identity) |
 | Window size | Exact window dimensions |
 | Always on top | Float above other windows |
 | Rotate with Alt+scroll | Toggle wheel rotation |
@@ -392,14 +435,16 @@ commands on buttons — one per line, case-insensitive:
 | `PROFILEINDEX 2` | switch to the 2nd profile in the list |
 | `LAYOUT 2x2` | apply a layout (2x2, 3x3, 4x4, 1+side, 2+8, 2+1) |
 | `MODE fullscreen` | windowed / fullscreen / windowless |
-| `FSSCREEN 2` | pick the fullscreen monitor (1-based), same as the monitor buttons in settings |
+| `FSSCREEN 2` | pick the main window's fullscreen monitor (1-based, left to right as the displays are arranged), same as the monitor buttons in settings |
+| `OUTSCREEN 2 Right TV` | send the canvas named "Right TV" to monitor 2 (left to right) — fixes a display assignment without touching the machine |
 | `PING` | connectivity check |
 | `PROFILES?` | replies `PROFILES ["Show A", …]` |
-| `STATUS?` | replies `STATUS {"profile":…,"mode":…,"tiles":…}` |
+| `STATUS?` | replies `STATUS {"profile":…,"mode":…,"tiles":…,"displays":…,"missing":[…]}` — `missing` lists canvases waiting for a disconnected display |
 
 Mosaic replies `OK`/`ERR …` per command and **pushes state changes** to
 all connected clients (`EVENT PROFILE …`, `EVENT PROFILES …`,
-`EVENT MODE …`) no matter what caused them — the foundation for
+`EVENT MODE …`, and `EVENT DISPLAY <canvas> MISSING|OK` when a
+canvas's display disconnects or returns) no matter what caused them — the foundation for
 active-profile button feedback. If Companion runs on another machine,
 allow Mosaic through Windows Firewall when prompted.
 

@@ -6,6 +6,48 @@ Vizrt NDI AB.
 
 ---
 
+## 0.7.1 — unreleased
+
+### Fixes
+- **Windows come back on the right display after a reboot.** Each
+  canvas used to remember its monitor only as a number in the
+  computer's display list, and macOS can number the displays
+  differently after a reboot — so two identical TVs could swap. Mosaic
+  now remembers each display by its identity.
+- **Fullscreen fits the display again after it changes.** A display
+  coming back at a different resolution or rotation (common while TVs
+  wake up) is now covered exactly; before, only adding or removing a
+  display was noticed.
+- **The main window remembers its mode, fullscreen monitor and
+  position** across restarts (it used to always start windowed).
+
+### New
+- **Disconnected displays:** a fullscreen canvas whose display is
+  unplugged, off or in standby hides instead of jumping onto another
+  screen, shows as **⚠** in the sidebar (with a temporary **Show**
+  button), and returns to its display by itself when it reconnects.
+- A replaced display of the same make and model is recognised
+  automatically (after it has been gone for about two minutes; never a
+  display already in use).
+- Leaving fullscreen returns a window to exactly its earlier spot and
+  size (it could come back nudged on macOS).
+- Mosaic no longer brings itself to the front when a TV wakes or a
+  display changes (only once, right after launch).
+- Monitor pickers and `FSSCREEN` number displays left to right as they
+  are arranged, and show each display's name and size.
+- Remote control: `OUTSCREEN n <canvas>` sends a canvas to a monitor;
+  `STATUS?` lists canvases waiting for a display (`missing`); `EVENT
+  DISPLAY <canvas> MISSING|OK` is pushed when that changes.
+- A small display-change log (`displays.log` in Mosaic's app data
+  folder) for troubleshooting.
+
+### Upgrading
+- After updating, click each canvas's monitor once (⋯ menu) and the
+  main window's fullscreen monitor once (settings) — older versions only
+  saved a monitor number.
+
+---
+
 ## 0.7.0 — 2026-08-12
 
 The stable release of the 0.6.7/0.6.8 fix line — all diagnostic logging
