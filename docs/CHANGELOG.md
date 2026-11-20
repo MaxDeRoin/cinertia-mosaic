@@ -20,6 +20,10 @@ Vizrt NDI AB.
   display was noticed.
 - **The main window remembers its mode, fullscreen monitor and
   position** across restarts (it used to always start windowed).
+- **Windows: a window whose monitor is off when Mosaic starts keeps its
+  saved spot** (a TV in standby, or Mosaic starting with Windows before
+  the TV is up) and goes back there when the monitor comes on, as on
+  macOS. Before, that spot was forgotten at the next autosave.
 - **No more memory spikes when the screen side is held up.** Every video
   frame used to be queued for display, so whenever drawing paused (a TV
   going into standby, a display reconfiguring, a busy moment) frames piled

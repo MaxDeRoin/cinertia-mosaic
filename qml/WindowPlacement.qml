@@ -310,7 +310,14 @@ QtObject {
         if (!o || !o.wkey || !displays)
             return "none"
         const state = displays.resolve(o.wkey, 0).state
-        if (state === "fallback") {
+        // Without display ids (Windows) resolve() says "fallback" both for a
+        // display from another machine and for this machine's own display
+        // that is off right now (TV in standby, not up yet at login). Only the
+        // first is foreign: the second keeps its home, like "missing" on
+        // macOS, so the window goes back when the display returns instead of
+        // its saved spot being overwritten by the next autosave.
+        if (state === "fallback"
+                && (displays.canReportMissing || !displays.usedHere(o.wkey))) {
             clearHome()
             return "foreign"
         }

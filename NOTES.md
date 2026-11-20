@@ -19,6 +19,27 @@ restarts, working. Remaining: Windows build check on the PC, merge PR #1,
 then promote v0.7.1 to a full release with the Windows installer and guide
 PDF (and mark it latest).
 
+**0.7.1 Windows check (2026-11-19, Windows 11 ARM VM in Parallels on
+the Mac, building x64).** Built clean with MSVC 19.44 (VS 2022 Build
+Tools 17.14, Qt 6.8.3 msvc2022_64 in `C:\Qt`, source cloned to
+`C:\src\cinertia-mosaic`); no compile fixes needed. The NDI 6 SDK
+installer put itself in `C:\Program Files (x86)\NDI\NDI 6 SDK` here, so
+configure with `-DNDI_SDK_DIR="C:/Program Files (x86)/NDI/NDI 6 SDK"`.
+One Windows-only fix: without display ids, `resolve()` says "fallback"
+both for a display from another PC and for this PC's own display that
+is off at launch, and `WindowPlacement.restore()` treated both as
+foreign — clearing the saved spot, which the next autosave then
+overwrote. DisplayManager now remembers the EDID/name signatures of
+displays this PC has used (`displays/knownSignatures`, Windows only) and
+`usedHere(key)` lets restore() keep the home as "missing", like macOS.
+Windows' generic `\\.\DISPLAYn` names (displays with no name of their
+own) are never remembered — Windows renumbers them — so those keys keep
+the old absolute-rectangle restore.
+Fullscreen behaviour is unchanged (Windows still never hides an
+output). Tested by faking a known-but-off display in the session: kept
+with the fix, overwritten without; a layout from another PC still
+counts as foreign.
+
 **0.7.1 — displays remembered by identity (2026-11-19, Mac
 session).** Fixes the show Mac's TVs swapping after a reboot and covers not
 refitting when a display changes. Windows used to store their fullscreen

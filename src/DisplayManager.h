@@ -61,6 +61,11 @@ public:
     // Record that a window uses this display (a covered display is never
     // taken as a stand-in for another missing one).
     Q_INVOKABLE void markUsed(QScreen *screen);
+    // Whether a saved key names a display this machine has used before (as
+    // opposed to one from a layout made on another machine). Lets a window
+    // keep its saved spot while its own display is off, even where resolve()
+    // can't report "missing" (Windows).
+    Q_INVOKABLE bool usedHere(const QVariant &key) const;
 
     // Which connected display a saved key means. Returns
     //   { state: "found",     screen }  the display is connected
@@ -122,6 +127,9 @@ private:
     // Also guards the replaced-unit rule: only never-assigned displays can
     // be adopted in place of a missing one.
     QSet<QString> m_seenIds;
+    // Platforms without ids (Windows): EDID and name signatures of displays
+    // this machine has made keys for (persisted) — see usedHere().
+    QSet<QString> m_seenSignatures;
     // Replaced displays (persisted): old id -> the identical unit that
     // stood in for it after it stayed missing.
     QHash<QString, QString> m_replacedBy;

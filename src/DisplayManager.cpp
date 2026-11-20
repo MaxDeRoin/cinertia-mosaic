@@ -29,6 +29,7 @@ constexpr int kMaxUnresolvedRetries = 10;
 
 const QString kKnownIdsSetting = QStringLiteral("displays/knownIds");
 const QString kReplacedSetting = QStringLiteral("displays/replacedBy");
+const QString kKnownSignaturesSetting = QStringLiteral("displays/knownSignatures");
 // A known display must be gone this long (with the layout calm) before an
 // identical never-used display may stand in for it — so a TV in HDMI
 // standby, or one that is slow to come up at boot, is never replaced.
@@ -62,6 +63,23 @@ QList<QScreen *> sortedScreens()
         return ga.x() != gb.x() ? ga.x() < gb.x() : ga.y() < gb.y();
     });
     return list;
+}
+
+// Platforms without ids: what a key says about its display, as strings to
+// remember — the EDID make/model/serial when there is a serial, and the
+// display's name. Not Windows' generic device names ("\\.\DISPLAY2", used
+// when a display reports no name of its own): Windows renumbers those, so
+// a saved one may never come back even with the display connected — such
+// keys stay "from elsewhere" and keep the old absolute-rectangle restore.
+QStringList signaturesOf(const QString &vendor, const QString &model,
+                         const QString &serial, const QString &name)
+{
+    QStringList out;
+    if (!serial.isEmpty())
+        out.append(QStringLiteral("edid:%1|%2|%3").arg(vendor, model, serial));
+    if (!name.isEmpty() && !name.startsWith(QLatin1String("\\\\.\\")))
+        out.append(QStringLiteral("name:") + name);
+    return out;
 }
 
 QVariantMap result(const char *state, QScreen *screen = nullptr)
@@ -107,6 +125,10 @@ DisplayManager::DisplayManager(QObject *parent)
         const QVariantMap replaced = QSettings().value(kReplacedSetting).toMap();
         for (auto it = replaced.cbegin(); it != replaced.cend(); ++it)
             m_replacedBy.insert(it.key(), it.value().toString());
+    } else {
+        const QStringList known =
+            QSettings().value(kKnownSignaturesSetting).toStringList();
+        m_seenSignatures = QSet<QString>(known.begin(), known.end());
     }
     m_clock.start();
 
@@ -290,6 +312,39 @@ void DisplayManager::markUsed(QScreen *screen)
         m_seenIds.insert(d.id);
         rememberIds();
     }
+    if (!platformHasDisplayIds()) {
+        bool added = false;
+        const QStringList sigs =
+            signaturesOf(d.vendor, d.model, d.serial, screen->name());
+        for (const QString &sig : sigs) {
+            if (!m_seenSignatures.contains(sig)) {
+                m_seenSignatures.insert(sig);
+                added = true;
+            }
+        }
+        if (added) {
+            QStringList list(m_seenSignatures.begin(), m_seenSignatures.end());
+            list.sort();
+            QSettings().setValue(kKnownSignaturesSetting, list);
+        }
+    }
+}
+
+bool DisplayManager::usedHere(const QVariant &keyVariant) const
+{
+    const QVariantMap key = toMap(keyVariant);
+    if (platformHasDisplayIds()) {
+        const QString id = key.value(QStringLiteral("id")).toString();
+        return !id.isEmpty() && m_seenIds.contains(id);
+    }
+    const QStringList sigs = signaturesOf(key.value(QStringLiteral("vendor")).toString(),
+                                          key.value(QStringLiteral("model")).toString(),
+                                          key.value(QStringLiteral("serial")).toString(),
+                                          key.value(QStringLiteral("name")).toString());
+    for (const QString &sig : sigs)
+        if (m_seenSignatures.contains(sig))
+            return true;
+    return false;
 }
 
 QVariantMap DisplayManager::makeKey(QScreen *screen) const
