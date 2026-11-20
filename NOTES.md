@@ -15,9 +15,13 @@ Easy to rename later.
 **0.7.1 — published as a macOS pre-release (v0.7.1, 2026-11-19, not
 latest; Mosaic-0.7.1.dmg from commit 5f026cc on branch display-identity,
 pull request #1).** Show Mac tested: Always allow the NDI network on, several
-restarts, working. Remaining: Windows build check on the PC, merge PR #1,
-then promote v0.7.1 to a full release with the Windows installer and guide
-PDF (and mark it latest).
+restarts, working. Windows check passed 2026-11-20 (live NDI sources,
+canvas and main-window fullscreen on picked monitors, Always on top while
+fullscreen, restore after restart, no macOS-only switch in Settings).
+Remaining: merge PR #1 (Max's OK), then promote v0.7.1 to a full release
+with the Windows installer and guide PDF (and mark it latest). The macOS
+dmg on the pre-release predates the Windows-only fix (4364296), which
+doesn't change the Mac build's behaviour.
 
 **0.7.1 Windows check (2026-11-19, Windows 11 ARM VM in Parallels on
 the Mac, building x64).** Built clean with MSVC 19.44 (VS 2022 Build
