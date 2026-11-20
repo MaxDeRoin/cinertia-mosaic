@@ -6,7 +6,7 @@ Vizrt NDI AB.
 
 ---
 
-## 0.7.1 — unreleased
+## 0.7.1 — 2026-11-20
 
 ### Fixes
 - **Windows come back on the right display after a reboot.** Each

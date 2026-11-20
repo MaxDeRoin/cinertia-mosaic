@@ -12,9 +12,14 @@ approval from the NDI team, so everything internal uses this codename for now.
 Easy to rename later.
 
 ## Current status
-**0.7.1 — published as a macOS pre-release (v0.7.1, 2026-11-19, not
-latest; Mosaic-0.7.1.dmg from commit 5f026cc on branch display-identity,
-pull request #1).** Show Mac tested: Always allow the NDI network on, several
+**0.7.1 — released and marked latest (2026-11-20).** All four downloads on
+the v0.7.1 release: `Mosaic-Setup-0.7.1.exe`, `Mosaic-0.7.1.dmg` (built
+earlier from 5f026cc — the later Windows-only fix doesn't change the Mac
+app), the guide PDF and the Companion module (0.1.1, unchanged). Tag
+v0.7.1 moved from 5f026cc to master 85efd4e (Max's OK) so the source
+downloads include the Windows fix. Pre-release history: published
+2026-11-19 as a macOS pre-release from branch display-identity (pull
+request #1). Show Mac tested: Always allow the NDI network on, several
 restarts, working. Windows check passed 2026-11-20 (live NDI sources,
 canvas and main-window fullscreen on picked monitors, Always on top while
 fullscreen, restore after restart, no macOS-only switch in Settings).
