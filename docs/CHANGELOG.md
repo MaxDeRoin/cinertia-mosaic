@@ -6,6 +6,77 @@ Vizrt NDI AB.
 
 ---
 
+## 0.7.1 — unreleased
+
+### Fixes
+- **Windows come back on the right display after a reboot.** Each
+  canvas used to remember its monitor only as a number in the
+  computer's display list, and macOS can number the displays
+  differently after a reboot — so two identical TVs could swap. Mosaic
+  now remembers each display by its identity.
+- **Fullscreen fits the display again after it changes.** A display
+  coming back at a different resolution or rotation (common while TVs
+  wake up) is now covered exactly; before, only adding or removing a
+  display was noticed.
+- **The main window remembers its mode, fullscreen monitor and
+  position** across restarts (it used to always start windowed).
+- **Windows: a window whose monitor is off when Mosaic starts keeps its
+  saved spot** (a TV in standby, or Mosaic starting with Windows before
+  the TV is up) and goes back there when the monitor comes on, as on
+  macOS. Before, that spot was forgotten at the next autosave.
+- **No more memory spikes when the screen side is held up.** Every video
+  frame used to be queued for display, so whenever drawing paused (a TV
+  going into standby, a display reconfiguring, a busy moment) frames piled
+  up at the source's frame rate — about 84 MB per second with three 1080p60
+  sources, measured — and could push the Mac into gigabytes, looking like a
+  memory leak. Each tile now keeps only its newest waiting frame; memory
+  stays flat through the same pause. (A full leak hunt — code review plus
+  hours of measurements with live video, a sleeping display and hundreds of
+  profile switches — found no true leak.)
+- **Mosaic now tells you when macOS blocks its network access.** After a
+  restart, macOS can wrongly block an app's local network access (a known
+  macOS issue): sources still show in the list but no tile can connect,
+  and only switching Mosaic's Local Network permission off and on (or
+  reinstalling) brought them back. Mosaic now detects this, shows a banner
+  with the fix and an **Open Local Network settings** button, keeps
+  retrying so tiles return as soon as access is restored, logs it, and
+  reports it over remote control (`STATUS?` `ndiBlocked`, `EVENT NDI
+  BLOCKED|OK`).
+- **New setting for show Macs: Always allow the NDI network** (macOS
+  15.5+, off by default). Applies Apple's documented exemption for the
+  network the Mac is connected to, so macOS can no longer block NDI after
+  a restart. Asks for the administrator password; takes effect after a
+  restart; switching it off removes exactly what Mosaic added.
+- **Remote-control connections that drop without closing** (cable pulled,
+  controller powered off) are now detected and cleaned up.
+
+### New
+- **Disconnected displays:** a fullscreen canvas whose display is
+  unplugged, off or in standby hides instead of jumping onto another
+  screen, shows as **⚠** in the sidebar (with a temporary **Show**
+  button), and returns to its display by itself when it reconnects.
+- A replaced display of the same make and model is recognised
+  automatically (after it has been gone for about two minutes; never a
+  display already in use).
+- Leaving fullscreen returns a window to exactly its earlier spot and
+  size (it could come back nudged on macOS).
+- Mosaic no longer brings itself to the front when a TV wakes or a
+  display changes (only once, right after launch).
+- Monitor pickers and `FSSCREEN` number displays left to right as they
+  are arranged, and show each display's name and size.
+- Remote control: `OUTSCREEN n <canvas>` sends a canvas to a monitor;
+  `STATUS?` lists canvases waiting for a display (`missing`); `EVENT
+  DISPLAY <canvas> MISSING|OK` is pushed when that changes.
+- A small display-change log (`displays.log` in Mosaic's app data
+  folder) for troubleshooting.
+
+### Upgrading
+- After updating, click each canvas's monitor once (⋯ menu) and the
+  main window's fullscreen monitor once (settings) — older versions only
+  saved a monitor number.
+
+---
+
 ## 0.7.0 — 2026-08-12
 
 The stable release of the 0.6.7/0.6.8 fix line — all diagnostic logging

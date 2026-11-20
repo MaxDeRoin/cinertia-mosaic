@@ -21,7 +21,16 @@ Window {
     property string outputName: "Output"
     // 0 = windowed, 1 = fullscreen, 2 = windowless (frameless)
     property int windowMode: 0
+    // Which display fullscreen uses. screenKey (a saved display identity,
+    // JSON — see Displays.keyFor) wins; screenIndex is the fallback for
+    // sessions saved before keys existed.
     property int screenIndex: 0
+    property string screenKey: ""
+    // The shared Displays object (display identity + change notices).
+    property var displays: null
+    // True while fullscreen is waiting for its display to be connected —
+    // the window stays hidden instead of covering some other display.
+    property bool displayMissing: false
     // True while sidebar source clicks land on this canvas.
     property bool isTarget: false
 
@@ -45,14 +54,22 @@ Window {
     signal closeRequested()
     signal renameRequested(string name)
     signal modeChangeRequested(int mode)
-    signal screenPicked(int index)
+    // A monitor was picked in the ⋯ menu (a QScreen from Displays.screens).
+    signal screenPicked(var screen)
     signal targetRequested()
     signal tilesMutated()
 
     // Set while the whole app quits: closing then must NOT delete this
     // output from the session that was just saved.
     property bool appQuitting: false
-    onClosing: {
+    onClosing: close => {
+        // Closing the temporary "Show" window just hides it again (like the
+        // sidebar's Hide) — it must not delete the canvas.
+        if (showHere && !appQuitting) {
+            close.accepted = false
+            showHere = false
+            return
+        }
         if (!appQuitting)
             closeRequested()
     }
@@ -66,11 +83,26 @@ Window {
     // borderless screen-cover on macOS). Tracked explicitly because macOS
     // fullscreen no longer sets Window.FullScreen visibility.
     property bool fsActive: false
+    // Temporary "show it here anyway" while its fullscreen display is
+    // missing (sidebar ⚠ button): a normal window on another display, never
+    // saved, and cleared automatically when the display comes back.
+    property bool showHere: false
+    onShowHereChanged: {
+        if (!showHere)
+            showHerePlaced = false
+        Qt.callLater(applyMode)
+    }
+    // The temporary window has been put on a free display (once — re-applies
+    // while it is shown leave it where the user drags it).
+    property bool showHerePlaced: false
+    // The display the fullscreen cover was last put on — to hide at once if
+    // exactly that display disappears.
+    property var coverScreen: null
 
     // The windowed geometry worth saving in the session, even while the
     // output is currently fullscreen.
     function windowedRect() {
-        return (fsActive && savedGeom.width > 200)
+        return ((fsActive || displayMissing) && savedGeom.width > 200)
             ? savedGeom : Qt.rect(x, y, width, height)
     }
 
@@ -79,26 +111,62 @@ Window {
         if (windowMode === 1)
             Qt.callLater(applyMode)
     }
+    onScreenKeyChanged: {
+        if (windowMode === 1)
+            Qt.callLater(applyMode)
+    }
     Component.onCompleted: {
         if (windowMode !== 0)
             Qt.callLater(applyMode)
     }
 
-    // Startup re-assert: at login/session restore, applyMode's first run can
-    // happen before the window is mapped or before macOS has brought up all
-    // displays — the OS then places the window on the wrong screen and the
-    // menu-bar cover never engages. Re-apply (idempotent) once the window is
-    // actually visible, whenever the display list changes, and once more a
-    // moment after startup.
+    // Where this window sits when not fullscreen (display + offset), so it
+    // comes back on the same display after a restart or reconnect.
+    WindowPlacement {
+        id: placement
+        win: out
+        displays: out.displays
+        // Only real, user-made positions: not fullscreen, not hidden, not
+        // the temporary "show here" spot.
+        canRecord: !out.fsActive && !out.displayMissing && !out.showHere
+                   && out.visible
+    }
+    function noteMoved() {
+        if (!applying)
+            placement.noteMoved()
+    }
+    onXChanged: noteMoved()
+    onYChanged: noteMoved()
+    onWidthChanged: noteMoved()
+    onHeightChanged: noteMoved()
+
+    // Re-apply (idempotent) once the window is actually visible, whenever the
+    // display layout settles after a change (a display added, removed, woken,
+    // rotated or resized — including at login, when displays come up after
+    // the app starts), and once more a moment after startup.
     onVisibleChanged: {
         if (visible && windowMode === 1)
             Qt.callLater(applyMode)
     }
     Connections {
-        target: Qt.application
-        function onScreensChanged() {
+        target: out.displays
+        function onLayoutChanged() {
+            out.healAttempts = 0
             if (out.windowMode === 1)
-                Qt.callLater(out.applyMode)
+                out.applyMode()
+            else
+                placement.onLayout() // e.g. its display came back: return to it
+        }
+        // The cover's display just disappeared: hide now, before the OS
+        // slides the cover onto another display (the debounced re-apply
+        // follows and keeps it hidden until the display returns).
+        function onScreenGone(screen) {
+            // (Only where a missing display can be told apart — on Windows
+            // the settled re-apply handles it, as before.)
+            if (out.displays.canReportMissing
+                    && out.windowMode === 1 && out.fsActive && !out.showHere
+                    && out.coverScreen === screen)
+                out.park()
         }
     }
     Timer {
@@ -108,57 +176,218 @@ Window {
         onTriggered: out.applyMode()
     }
 
-    function applyMode() {
-        // Remember the current windowed rectangle unless we're already
-        // showing fullscreen (whose geometry is the screen cover).
-        if (!fsActive && width > 200)
-            savedGeom = Qt.rect(x, y, width, height)
-        if (windowMode === 1) {
-            const screens = Qt.application.screens
-            const target = screens[Math.min(screenIndex, screens.length - 1)]
-            fsActive = true
-            if (Qt.platform.os === "windows") {
-                // Native fullscreen; dip through windowed so a monitor
-                // change actually moves displays.
-                if (visibility === Window.FullScreen)
-                    visibility = Window.Windowed
-                flags = Qt.Window
-                out.screen = target
-                visibility = Window.FullScreen
+    // Self-check for unattended use: if a fullscreen output ever stops
+    // covering its display exactly (a display change the OS reported late
+    // or not at all), re-apply. Three quick tries, then once a minute — it
+    // can never fight the OS in a tight loop.
+    property int healAttempts: 0
+    property int healTicks: 0
+    Timer {
+        interval: 3000
+        repeat: true
+        running: out.windowMode === 1
+        onTriggered: {
+            if (!out.displays || out.displays.settling || out.showHere
+                    || out.visibility === Window.Minimized)
+                return
+            if (out.healAttempts >= 3 && (++out.healTicks % 20) !== 0)
+                return
+            if (out.needsHeal()) {
+                out.healAttempts++
+                console.log("Output '" + out.outputName
+                            + "': fullscreen re-applied (self-check)")
+                out.applyMode()
             } else {
-                // macOS: cover the target screen with a borderless window
-                // instead of Qt's native fullscreen. Native fullscreen puts
-                // each window in its own Space, whose async transition lands
-                // on the wrong monitor and loses the window on exit.
-                out.screen = target
-                flags = Qt.Window | Qt.FramelessWindowHint
-                out.x = target.virtualX
-                out.y = target.virtualY
-                out.width = target.width
-                out.height = target.height
-                visibility = Window.Windowed
-                visible = true
-                out.raise()
-                macWindow.setCoversMenuBar(out, true)
-            }
-        } else {
-            fsActive = false
-            visibility = Window.Windowed
-            flags = windowMode === 2
-                ? Qt.Window | Qt.FramelessWindowHint
-                : Qt.Window
-            if (savedGeom.width > 200) {
-                x = savedGeom.x
-                y = savedGeom.y
-                width = savedGeom.width
-                height = savedGeom.height
-            }
-            visible = true
-            if (Qt.platform.os !== "windows") {
-                macWindow.setCoversMenuBar(out, false)
-                out.raise()
+                out.healAttempts = 0
             }
         }
+    }
+    function needsHeal() {
+        const r = displays.resolve(screenKey, screenIndex)
+        if (r.state === "uncertain")
+            return false
+        if (!r.screen)
+            return visible // should be hidden while its display is missing
+        return !visible || !coveringCorrectly(r.screen)
+    }
+    // Already fullscreen on exactly this display? (Then re-applying would
+    // only flicker — Windows drops out of fullscreen to switch.)
+    function coveringCorrectly(t) {
+        if (!fsActive || !visible)
+            return false
+        if (Qt.platform.os === "windows")
+            return visibility === Window.FullScreen
+                && displays.screenOf(out) === t
+        const g = t.geometry
+        return Math.abs(x - g.x) <= 2 && Math.abs(y - g.y) <= 2
+            && Math.abs(width - g.width) <= 2 && Math.abs(height - g.height) <= 2
+            && macWindow.isCovering(out, Qt.rect(g.x, g.y, g.width, g.height))
+    }
+
+    // Which display fullscreen should use, for display only (pickers):
+    // null when that display isn't connected.
+    function targetScreen() {
+        if (!displays)
+            return null
+        const r = displays.resolve(screenKey, screenIndex)
+        return r.screen || null
+    }
+
+    // True while applyMode itself moves the window (not a user move).
+    property bool applying: false
+
+    // Hide while the fullscreen display is missing — never cover another
+    // display. Leaves fsActive and the saved windowed geometry untouched.
+    function park() {
+        displayMissing = true
+        if (Qt.platform.os !== "windows")
+            macWindow.setCoversMenuBar(out, false)
+        // hide() rather than visible = false: once a window's visibility
+        // mode has been set, Qt warns about the property route.
+        out.hide()
+    }
+
+    function applyMode() {
+        if (!displays)
+            return
+        // Remember the current windowed rectangle unless we're already
+        // showing fullscreen (whose geometry is the screen cover) or the
+        // window sits at a temporary spot.
+        if (!fsActive && visible && !showHere && !displayMissing && width > 200) {
+            savedGeom = Qt.rect(x, y, width, height)
+            placement.flush() // a just-made move counts before fullscreen
+        } else if (showHere || displayMissing) {
+            placement.discard() // moves at a temporary spot never count
+        }
+        // Leaving fullscreen or a waiting/temporary state puts the window
+        // back at its home; a plain windowed <-> windowless switch leaves it
+        // where it is.
+        const wasSpecial = fsActive || displayMissing || showHere || !visible
+        applying = true
+
+        if (windowMode === 1) {
+            const r = displays.resolve(screenKey, screenIndex)
+            if (r.state === "uncertain") {
+                applying = false
+                return // displays mid-change: the settled layout decides
+            }
+            if (r.screen) {
+                displayMissing = false
+                showHere = false
+                coverOn(r.screen)
+                applying = false
+                return
+            }
+            // Display not connected (unplugged, powered off, not up yet).
+            if (!showHere) {
+                park()
+                applying = false
+                return
+            }
+            // ...but the user asked to see it anyway: a normal window for now.
+            displayMissing = true
+        } else {
+            displayMissing = false
+            showHere = false // only meaningful while fullscreen waits
+        }
+        windowedOn(wasSpecial)
+        applying = false
+    }
+
+    function coverOn(t) {
+        coverScreen = t
+        displays.markUsed(t) // never a stand-in for another missing display
+        if (coveringCorrectly(t))
+            return // already right: touch nothing (no flicker)
+        fsActive = true
+        const g = t.geometry
+        if (Qt.platform.os === "windows") {
+            // Native fullscreen; dip through windowed when the display or
+            // the window flags change (Windows applies a framed style over
+            // fullscreen otherwise), so a monitor change really moves.
+            if (visibility === Window.FullScreen
+                    && (displays.screenOf(out) !== t || flags !== Qt.Window))
+                visibility = Window.Windowed
+            flags = Qt.Window
+            displays.assignScreen(out, t)
+            visibility = Window.FullScreen
+        } else {
+            // macOS: cover the target screen with a borderless window
+            // instead of Qt's native fullscreen. Native fullscreen puts
+            // each window in its own Space, whose async transition lands
+            // on the wrong monitor and loses the window on exit. Uses the
+            // display's CURRENT geometry, so a display that came back at a
+            // different resolution or rotation is covered exactly.
+            displays.assignScreen(out, t)
+            flags = Qt.Window | Qt.FramelessWindowHint
+            out.x = g.x
+            out.y = g.y
+            out.width = g.width
+            out.height = g.height
+            // visible before visibility: setting a mode on a window still
+            // marked hidden (it was waiting for its display) makes Qt warn.
+            visible = true
+            visibility = Window.Windowed
+            out.raise()
+            macWindow.setCoversMenuBar(out, true, Qt.rect(g.x, g.y, g.width, g.height))
+        }
+    }
+
+    function windowedOn(wasSpecial) {
+        fsActive = false
+        coverScreen = null
+        // (A hidden window becomes windowed when shown below; setting the
+        // mode while it is hidden only makes Qt warn.)
+        if (visible)
+            visibility = Window.Windowed
+        flags = windowMode === 2
+            ? Qt.Window | Qt.FramelessWindowHint
+            : Qt.Window
+        const r = savedGeom.width > 200 ? savedGeom : Qt.rect(x, y, width, height)
+        if (showHere) {
+            // The temporary spot: on a display no fullscreen window covers
+            // (its home might be under one, where it would be invisible).
+            if (!showHerePlaced) {
+                placement.apply(showHereRect(r))
+                showHerePlaced = true
+            }
+        } else if (wasSpecial) {
+            // Back to its remembered spot (on its own display when that's
+            // connected), else to where it was before, kept on a display
+            // that exists now.
+            if (!placement.place())
+                placement.apply(placement.fitRect(r, null))
+        } else if (savedGeom.width > 200) {
+            // Same spot (Windows can reset the size when flags change).
+            placement.apply(savedGeom)
+        }
+        visible = true
+        if (Qt.platform.os !== "windows") {
+            macWindow.setCoversMenuBar(out, false)
+            out.raise()
+        }
+    }
+
+    // Where the temporary "show here" window goes: centred on a display no
+    // fullscreen window covers (Main's fitHelper), shrunk to fit.
+    function showHereRect(r) {
+        const s = (fitHelper ? fitHelper(out) : null) || displays.primary()
+        return s ? placement.centredOn(s, r) : r
+    }
+    // Set by Main: picks a display not covered by any fullscreen window.
+    property var fitHelper: null
+
+    // Session save/restore of the windowed position (display-relative).
+    function capturePlacement() {
+        // While fullscreen, the pre-fullscreen rectangle stands in (the
+        // current size is the cover).
+        return placement.capture((fsActive || displayMissing) ? savedGeom : null)
+    }
+    function restorePlacement(o, doPlace) {
+        return placement.restore(o, doPlace)
+    }
+    function restoreLegacyRect(r) {
+        placement.restoreLegacy(r)
     }
 
     // Each output window handles its own keys: Esc cancels tile overlays
@@ -473,27 +702,51 @@ Window {
             }
 
             Text {
-                visible: Qt.application.screens.length > 1
+                visible: monitorRep.count > 1
                 text: "MONITOR"
                 color: "#5a5a60"
                 font.pixelSize: 9
             }
             Flow {
-                visible: Qt.application.screens.length > 1
+                visible: monitorRep.count > 1
                 width: menuCol.width
                 spacing: 4
 
                 Repeater {
-                    model: Qt.application.screens.length > 1
-                           ? Qt.application.screens.length : 0
+                    id: monitorRep
+                    model: out.displays ? out.displays.screens : []
 
                     OutBtn {
                         required property int index
+                        required property var modelData
                         label: String(index + 1)
-                        active: out.screenIndex === index
-                        onActivated: out.screenPicked(index)
+                        // Highlight by identity, so the right button stays
+                        // lit even when the OS reorders the displays.
+                        active: {
+                            out.displays && out.displays.revision
+                            return out.targetScreen() === modelData
+                        }
+                        // Not while displays are changing: the pick would
+                        // be locked to whatever display sits there mid-change.
+                        opacity: out.displays && out.displays.settling ? 0.4 : 1
+                        onActivated: {
+                            if (!out.displays.settling)
+                                out.screenPicked(modelData)
+                        }
                     }
                 }
+            }
+            Text {
+                visible: monitorRep.count > 1
+                width: menuCol.width
+                wrapMode: Text.WordWrap
+                text: {
+                    out.displays && out.displays.revision
+                    const t = out.targetScreen()
+                    return t ? out.displays.describe(t) : ""
+                }
+                color: "#8a8a90"
+                font.pixelSize: 10
             }
 
             OutBtn {

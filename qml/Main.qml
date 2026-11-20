@@ -28,8 +28,17 @@ ApplicationWindow {
     // Start-with-Windows registration. The registry is the source of
     // truth, so the checkbox reads live state rather than session.json.
     StartupLauncher { id: startupLauncher }
+    // macOS 15.5+: the "Always allow the NDI network" setting (see the
+    // NDI network watchdog below and LocalNetworkAccess.h).
+    LocalNetworkAccess { id: localNet }
     // macOS only: lifts a fullscreen window above the menu bar (no-op elsewhere).
     MacWindow { id: macWindow }
+    // (id is not "displays": that name is a property on the output windows,
+    // and binding displays: displays there would resolve to itself.)
+    // Recognises displays by identity (not by the OS's list order, which
+    // can change after a reboot) and reports when the display layout has
+    // settled after displays come, go, wake, rotate or change resolution.
+    Displays { id: displayMgr }
 
     // Layout export/import: the whole current setup (tiles and canvases,
     // like a profile) as a portable JSON file the user picks — for moving
@@ -149,7 +158,13 @@ ApplicationWindow {
                 remote.reply("STATUS " + JSON.stringify({
                     profile: window.currentProfile,
                     mode: window.modeName(),
-                    tiles: canvas.tileCount
+                    tiles: canvas.tileCount,
+                    // true while sources are visible but none can connect
+                    // (macOS blocking local network access — see watchdog)
+                    ndiBlocked: window.ndiBlocked,
+                    displays: displayMgr.screens.length,
+                    // Canvases waiting for their fullscreen display.
+                    missing: window.missingCanvasNames()
                 }))
                 return
             case "profile": {
@@ -188,13 +203,31 @@ ApplicationWindow {
                 default: ok = false
                 }
                 break
-            // FSSCREEN n — pick the fullscreen monitor (1-based), same as
-            // clicking a monitor button in settings. For remote control and
-            // for driving the display-picker code path in tests.
+            // FSSCREEN n — pick the main window's fullscreen monitor, same
+            // as clicking monitor button n in settings (displays numbered
+            // left to right as arranged in the OS display settings).
             case "fsscreen": {
-                const n = parseInt(argument) - 1
-                if (!isNaN(n) && n >= 0 && n < Qt.application.screens.length)
-                    window.fsScreenIndex = n
+                const s = displayMgr.screenAt(parseInt(argument) - 1)
+                if (s && !displayMgr.settling)
+                    window.pickFsScreen(s)
+                else
+                    ok = false
+                break
+            }
+            // OUTSCREEN n <canvas name> — send an output canvas to monitor n
+            // (left to right), same as its ⋯ menu monitor buttons. Fixes a
+            // display assignment from a Stream Deck without remoting in.
+            case "outscreen": {
+                const sp = argument.indexOf(" ")
+                const s = displayMgr.screenAt(parseInt(sp < 0 ? argument
+                                                     : argument.slice(0, sp)) - 1)
+                const nm = sp < 0 ? "" : argument.slice(sp + 1).trim().toLowerCase()
+                let idx = -1
+                for (let i = 0; i < outputModel.count; i++)
+                    if (outputModel.get(i).name.toLowerCase() === nm)
+                        idx = i
+                if (s && idx >= 0 && !displayMgr.settling)
+                    window.pickOutputScreen(idx, s)
                 else
                     ok = false
                 break
@@ -206,6 +239,84 @@ ApplicationWindow {
             }
             remote.reply(ok ? "OK" : "ERR " + command)
         }
+    }
+
+    // ------------------------------------------ NDI network watchdog
+    // A known macOS issue: right after a restart, macOS can cache a wrong
+    // "deny" for an app's Local Network access and keep blocking it until
+    // the app's Local Network switch is turned off and on (quitting and
+    // reopening does not help). NDI discovery still works — it is done by a
+    // system service — but no receiver can connect. The show Mac's 0.6.8 log
+    // shows exactly that after two restarts. Mosaic can't clear the block
+    // itself, so it detects it, says how to fix it, and keeps retrying so
+    // tiles come back the moment access returns.
+    property bool ndiBlocked: false
+    property int ndiStuckSecs: 0
+    // The cached deny is there from launch (it happens at boot). Once any
+    // tile has connected, a later "nothing connects" is a sender or network
+    // outage — the tiles' red dots show that; it must never be blamed on
+    // macOS mid-show.
+    property bool ndiEverConnected: false
+    function allTileItems() {
+        let tiles = canvas.allTiles()
+        for (let i = 0; i < outputModel.count; i++) {
+            const w = outputInst.objectAt(i)
+            if (w)
+                tiles = tiles.concat(w.canvas.allTiles())
+        }
+        return tiles
+    }
+    function checkNdiAccess() {
+        const visible = finder.sources
+        let connected = 0
+        const stuck = []
+        const tiles = allTileItems()
+        for (let i = 0; i < tiles.length; i++) {
+            const t = tiles[i]
+            if (!t.sourceName)
+                continue
+            if (t.connected)
+                connected++
+            else if (visible.indexOf(t.sourceName) >= 0)
+                stuck.push(t)
+        }
+        // Any connected tile, or nothing visible to connect to: not this.
+        if (connected > 0 || stuck.length === 0) {
+            ndiStuckSecs = 0
+            if (connected > 0)
+                ndiEverConnected = true
+            if (ndiBlocked) {
+                ndiBlocked = false
+                if (connected > 0) {
+                    displayMgr.logEvent("NDI: connections working again")
+                    remote.broadcast("EVENT NDI OK")
+                } else {
+                    // Cleared only because nothing visible is left to try.
+                    displayMgr.logEvent("NDI: no visible sources left to check")
+                    remote.broadcast("EVENT NDI IDLE")
+                }
+            }
+            return
+        }
+        ndiStuckSecs += 5
+        if (!ndiBlocked && !ndiEverConnected && ndiStuckSecs >= 20) {
+            ndiBlocked = true
+            displayMgr.logEvent("NDI: " + stuck.length + " tile(s) can see their source"
+                                + " but none can connect — local network access"
+                                + " looks blocked")
+            remote.broadcast("EVENT NDI BLOCKED")
+        }
+        // Re-create the receivers now and then while blocked, so they pick
+        // up access as soon as it is restored.
+        if (ndiBlocked && ndiStuckSecs % 30 === 0)
+            for (let i = 0; i < stuck.length; i++)
+                stuck[i].reconnect()
+    }
+    Timer {
+        interval: 5000
+        repeat: true
+        running: true
+        onTriggered: window.checkNdiAccess()
     }
 
     // ------------------------------------------------------ app state
@@ -272,12 +383,55 @@ ApplicationWindow {
             used.push(outputModel.get(i).name)
         while (used.indexOf("Output " + n) !== -1)
             n++
-        // Default to the next monitor over, if there is one.
-        const si = Math.min(Qt.application.screens.length - 1,
-                            outputModel.count + 1)
+        // Default to the next monitor over (left to right), if there is one.
+        const s = displayMgr.screenAt(Math.min(displayMgr.screens.length - 1,
+                                             outputModel.count + 1))
+        const key = s ? displayMgr.keyFor(s) : null
         outputModel.append({ name: "Output " + n,
-                             screenIndex: si, mode: 0 })
+                             screenIndex: s ? displayMgr.osIndexOf(s) : 0,
+                             screenKey: key && key.name ? JSON.stringify(key) : "",
+                             missing: false, mode: 0 })
         targetCanvas = outputModel.count
+    }
+
+    // A monitor picked for an output (⋯ menu or OUTSCREEN): store the
+    // display's identity — and its index, for older builds reading the file.
+    function pickOutputScreen(i, s) {
+        const key = displayMgr.keyFor(s)
+        if (key && key.name) // empty while the display can't be identified
+            outputModel.setProperty(i, "screenKey", JSON.stringify(key))
+        outputModel.setProperty(i, "screenIndex", displayMgr.osIndexOf(s))
+    }
+    function missingCanvasNames() {
+        const names = []
+        for (let i = 0; i < outputModel.count; i++)
+            if (outputModel.get(i).missing)
+                names.push(outputModel.get(i).name)
+        if (window.fsParked)
+            names.push("Main")
+        return names
+    }
+    // A display no fullscreen window is covering (primary first) — where a
+    // window shows while its own fullscreen display is missing, so it never
+    // lands underneath another output's cover. Null if every display is
+    // covered.
+    function uncoveredScreen(except) {
+        const covered = []
+        if (window.fsActive && window.coverScreen && except !== window)
+            covered.push(window.coverScreen)
+        for (let i = 0; i < outputModel.count; i++) {
+            const w = outputInst.objectAt(i)
+            if (w && w !== except && w.fsActive && w.visible && w.coverScreen)
+                covered.push(w.coverScreen)
+        }
+        const p = displayMgr.primary()
+        if (p && covered.indexOf(p) < 0)
+            return p
+        const all = displayMgr.screens
+        for (let i = 0; i < all.length; i++)
+            if (covered.indexOf(all[i]) < 0)
+                return all[i]
+        return null
     }
 
     function removeOutput(i) {
@@ -314,6 +468,8 @@ ApplicationWindow {
     property int fsScreenIndex: 0
     property bool sidebarCollapsed: false
     property bool settingsOpen: false
+    // Re-detect the connected networks for "Always allow the NDI network".
+    onSettingsOpenChanged: if (settingsOpen) localNet.refresh()
 
     onDisplayModeChanged: {
         remote.broadcast("EVENT MODE " + modeName())
@@ -333,21 +489,62 @@ ApplicationWindow {
         if (displayMode === 1)
             Qt.callLater(applyDisplayMode)
     }
+    onFsScreenKeyChanged: {
+        if (displayMode === 1)
+            Qt.callLater(applyDisplayMode)
+    }
 
-    // Startup re-assert: at login/session restore the first apply can run
-    // before the window is mapped or before macOS has brought up all
-    // displays — the OS then places the window on the wrong screen and the
-    // menu-bar cover never engages. Re-apply (idempotent) once visible,
-    // when the display list changes, and once more shortly after startup.
+    // The fullscreen monitor's saved identity (JSON, see Displays.keyFor).
+    // It wins over fsScreenIndex, which remains as the fallback for sessions
+    // saved before identities existed (and for older builds).
+    property string fsScreenKey: ""
+    function pickFsScreen(s) {
+        const key = displayMgr.keyFor(s)
+        if (key && key.name) // empty while the display can't be identified
+            fsScreenKey = JSON.stringify(key)
+        fsScreenIndex = displayMgr.osIndexOf(s)
+    }
+    // The connected display fullscreen uses (null when it's missing).
+    function fsTargetScreen() {
+        const r = displayMgr.resolve(fsScreenKey, fsScreenIndex)
+        return r.screen || null
+    }
+
+    // True while fullscreen is chosen but its display isn't connected: the
+    // main window then shows as a normal window on a free display (with the
+    // sidebar open) until that display returns. Saved settings don't change.
+    property bool fsParked: false
+    onFsParkedChanged: sidebarCollapsed = displayMode !== 0 && !fsParked
+
+    // Startup re-assert: at login the first apply can run before the window
+    // is mapped or before macOS has brought up all displays. Re-apply
+    // (idempotent) once visible, whenever the display layout settles after a
+    // change, and once more shortly after startup.
     onVisibleChanged: {
         if (window.visible && displayMode === 1)
             Qt.callLater(applyDisplayMode)
     }
     Connections {
-        target: Qt.application
-        function onScreensChanged() {
+        target: displayMgr
+        function onLayoutChanged() {
+            window.healAttempts = 0
             if (window.displayMode === 1)
-                Qt.callLater(window.applyDisplayMode)
+                window.applyDisplayMode()
+            else
+                mainPlacement.onLayout() // e.g. its display came back: return to it
+        }
+        // The cover's display just disappeared: get off it now, before the
+        // OS slides the cover over another display.
+        function onScreenGone(screen) {
+            // (Only where a missing display can be told apart — on Windows
+            // the settled re-apply handles it, as before.)
+            if (displayMgr.canReportMissing
+                    && window.displayMode === 1 && window.fsActive
+                    && window.coverScreen === screen) {
+                window.fsParked = true
+                window.mainWindowedOn(window.alwaysOnTop
+                                      ? Qt.WindowStaysOnTopHint : 0, true, true)
+            }
         }
     }
     Timer {
@@ -355,6 +552,35 @@ ApplicationWindow {
         running: window.displayMode === 1
         repeat: false
         onTriggered: window.applyDisplayMode()
+    }
+
+    // Self-check for unattended use (same as the output windows): re-apply
+    // if fullscreen ever stops covering its display exactly. Three quick
+    // tries, then once a minute.
+    property int healAttempts: 0
+    property int healTicks: 0
+    Timer {
+        interval: 3000
+        repeat: true
+        running: window.displayMode === 1
+        onTriggered: {
+            if (displayMgr.settling || window.visibility === Window.Minimized)
+                return
+            if (window.healAttempts >= 3 && (++window.healTicks % 20) !== 0)
+                return
+            const r = displayMgr.resolve(window.fsScreenKey, window.fsScreenIndex)
+            if (r.state === "uncertain")
+                return
+            const wrong = r.screen ? (window.fsParked || !window.coveringCorrectly(r.screen))
+                                   : !window.fsParked
+            if (wrong) {
+                window.healAttempts++
+                console.log("Main window: fullscreen re-applied (self-check)")
+                window.applyDisplayMode()
+            } else {
+                window.healAttempts = 0
+            }
+        }
     }
 
     // Windows recreates the native window when its style flags change and
@@ -365,60 +591,156 @@ ApplicationWindow {
     // borderless screen-cover on macOS). Tracked explicitly because macOS
     // fullscreen no longer sets Window.FullScreen visibility.
     property bool fsActive: false
+    // The display the fullscreen cover was last put on.
+    property var coverScreen: null
+    // True while applyDisplayMode itself moves the window.
+    property bool applying: false
+
+    // Where the main window sits when not fullscreen (display + offset).
+    WindowPlacement {
+        id: mainPlacement
+        win: window
+        displays: displayMgr
+        // Only real, user-made positions (not fullscreen, not the temporary
+        // spot while its fullscreen display is missing).
+        canRecord: !window.fsActive && !window.fsParked && window.visible
+    }
+    function noteMoved() {
+        if (!applying)
+            mainPlacement.noteMoved()
+    }
+    onXChanged: noteMoved()
+    onYChanged: noteMoved()
+    onWidthChanged: noteMoved()
+    onHeightChanged: noteMoved()
+
+    // Already fullscreen on exactly this display, with the right flags?
+    // (Then re-applying would only flicker.)
+    function coveringCorrectly(t) {
+        const onTop = alwaysOnTop ? Qt.WindowStaysOnTopHint : 0
+        if (!fsActive || !window.visible
+                || (window.flags & Qt.WindowStaysOnTopHint) !== onTop)
+            return false
+        if (Qt.platform.os === "windows")
+            return window.visibility === Window.FullScreen
+                && displayMgr.screenOf(window) === t
+        const g = t.geometry
+        return Math.abs(window.x - g.x) <= 2 && Math.abs(window.y - g.y) <= 2
+            && Math.abs(window.width - g.width) <= 2
+            && Math.abs(window.height - g.height) <= 2
+            && macWindow.isCovering(window, Qt.rect(g.x, g.y, g.width, g.height))
+    }
 
     function applyDisplayMode() {
         const onTop = alwaysOnTop ? Qt.WindowStaysOnTopHint : 0
         // Remember the current windowed rectangle unless we're already
         // showing fullscreen (whose geometry is the screen cover).
-        if (!fsActive && window.width > 200)
+        if (!fsActive && !fsParked && window.visible && window.width > 200) {
             savedGeom = Qt.rect(window.x, window.y, window.width, window.height)
+            mainPlacement.flush() // a just-made move counts before fullscreen
+        } else if (fsParked) {
+            mainPlacement.discard() // moves at the temporary spot never count
+        }
+        const wasFs = fsActive
+        const wasParked = fsParked
+        applying = true
 
         if (displayMode === 1) {
-            const screens = Qt.application.screens
-            const target = screens[Math.min(fsScreenIndex, screens.length - 1)]
-            fsActive = true
-            if (Qt.platform.os === "windows") {
-                // Native fullscreen; dip through windowed so a monitor
-                // change actually moves displays.
-                if (window.visibility === Window.FullScreen)
-                    window.visibility = Window.Windowed
-                window.flags = Qt.Window | onTop
-                window.screen = target
-                window.visibility = Window.FullScreen
-            } else {
-                // macOS: cover the target screen with a borderless window
-                // instead of Qt's native fullscreen. Native fullscreen puts
-                // each window in its own Space, whose async transition lands
-                // on the wrong monitor and loses the window on exit.
-                window.screen = target
-                window.flags = Qt.Window | Qt.FramelessWindowHint | onTop
-                window.x = target.virtualX
-                window.y = target.virtualY
-                window.width = target.width
-                window.height = target.height
-                window.visibility = Window.Windowed
-                window.visible = true
-                window.raise()
-                macWindow.setCoversMenuBar(window, true)
+            const r = displayMgr.resolve(fsScreenKey, fsScreenIndex)
+            if (r.state === "uncertain") {
+                applying = false
+                return // displays mid-change: the settled layout decides
             }
+            if (r.screen) {
+                fsParked = false
+                mainCoverOn(r.screen, onTop)
+                applying = false
+                return
+            }
+            fsParked = true // its display isn't connected
         } else {
-            fsActive = false
-            window.visibility = Window.Windowed
-            window.flags = displayMode === 2
-                ? Qt.Window | Qt.FramelessWindowHint | onTop
-                : Qt.Window | onTop
-            if (savedGeom.width > 200) {
-                window.x = savedGeom.x
-                window.y = savedGeom.y
-                window.width = savedGeom.width
-                window.height = savedGeom.height
-            }
-            window.visible = true
-            if (Qt.platform.os !== "windows") {
-                macWindow.setCoversMenuBar(window, false)
-                window.raise()
-            }
+            fsParked = false
         }
+        mainWindowedOn(onTop, wasFs || wasParked, fsParked && !wasParked)
+        applying = false
+    }
+
+    function mainCoverOn(t, onTop) {
+        coverScreen = t
+        displayMgr.markUsed(t) // never a stand-in for another missing display
+        if (coveringCorrectly(t))
+            return
+        fsActive = true
+        const g = t.geometry
+        if (Qt.platform.os === "windows") {
+            // Native fullscreen; dip through windowed when the display or the
+            // window flags change (e.g. Always on top toggled — Windows
+            // applies a framed style over fullscreen otherwise).
+            if (window.visibility === Window.FullScreen
+                    && (displayMgr.screenOf(window) !== t
+                        || window.flags !== (Qt.Window | onTop)))
+                window.visibility = Window.Windowed
+            window.flags = Qt.Window | onTop
+            displayMgr.assignScreen(window, t)
+            window.visibility = Window.FullScreen
+        } else {
+            // macOS: cover the target screen with a borderless window
+            // instead of Qt's native fullscreen. Native fullscreen puts
+            // each window in its own Space, whose async transition lands
+            // on the wrong monitor and loses the window on exit.
+            displayMgr.assignScreen(window, t)
+            window.flags = Qt.Window | Qt.FramelessWindowHint | onTop
+            window.x = g.x
+            window.y = g.y
+            window.width = g.width
+            window.height = g.height
+            window.visibility = Window.Windowed
+            window.visible = true
+            window.raise()
+            macWindow.setCoversMenuBar(window, true, Qt.rect(g.x, g.y, g.width, g.height))
+        }
+    }
+
+    // leaving: coming out of fullscreen or the parked state (go home);
+    // newlyParked: just parked (go to a free display).
+    function mainWindowedOn(onTop, leaving, newlyParked) {
+        applying = true
+        fsActive = false
+        coverScreen = null
+        window.visibility = Window.Windowed
+        window.flags = displayMode === 2
+            ? Qt.Window | Qt.FramelessWindowHint | onTop
+            : Qt.Window | onTop
+        // Its remembered spot on its own display when that's connected
+        // (not while parked — that spot may be under another output's
+        // cover), else the pre-fullscreen spot kept on a display that
+        // exists now.
+        const r = savedGeom.width > 200 ? savedGeom
+            : Qt.rect(window.x, window.y, window.width, window.height)
+        if (fsParked) {
+            // Parked: once, centred on a display no output covers (then
+            // left where the user drags it).
+            if (newlyParked) {
+                const s = uncoveredScreen(window)
+                mainPlacement.apply(s ? mainPlacement.centredOn(s, r)
+                                      : mainPlacement.fitRect(r, null))
+            }
+        } else if (leaving) {
+            if (!mainPlacement.place())
+                mainPlacement.apply(mainPlacement.fitRect(r, null))
+        } else if (savedGeom.width > 200) {
+            // Same spot (Windows can reset the size when flags change).
+            mainPlacement.apply(savedGeom)
+        }
+        window.visible = true
+        if (Qt.platform.os !== "windows") {
+            macWindow.setCoversMenuBar(window, false)
+            window.raise()
+        }
+        // Parked above any output covers, so it can't hide underneath one.
+        if (fsParked)
+            window.raise()
+        applying = false
     }
 
     property bool aboutOpen: false
@@ -507,15 +829,28 @@ ApplicationWindow {
             const o = {
                 name: m.name,
                 screenIndex: m.screenIndex,
+                // The monitor's identity, exactly as captured when it was
+                // picked (never regenerated, so it doesn't churn).
+                screenKey: m.screenKey || "",
                 mode: m.mode || 0, // 0 windowed, 1 fullscreen, 2 windowless
                 tiles: w.canvas.captureTiles()
             }
             if (withGeom) {
+                // Absolute rectangle (what older builds read) plus the
+                // display-relative spot this build restores from.
                 const r = w.windowedRect()
                 o.wx = r.x
                 o.wy = r.y
                 o.ww = r.width
                 o.wh = r.height
+                const pl = w.capturePlacement()
+                if (pl) {
+                    o.wkey = pl.wkey
+                    o.wrx = pl.wrx
+                    o.wry = pl.wry
+                    o.ww = pl.ww
+                    o.wh = pl.wh
+                }
             }
             arr.push(o)
         }
@@ -536,7 +871,8 @@ ApplicationWindow {
                 outputModel.remove(outputModel.count - 1)
         while (outputModel.count < outputs.length)
             outputModel.append({ name: "Output " + (outputModel.count + 2),
-                                 screenIndex: 0, mode: 0 })
+                                 screenIndex: 0, screenKey: "",
+                                 missing: false, mode: 0 })
         for (let i = 0; i < outputs.length; i++) {
             const o = outputs[i]
             // Saves from 0.3.0 stored `fullscreen: true/false` instead
@@ -546,17 +882,24 @@ ApplicationWindow {
             outputModel.set(i, {
                 name: o.name || ("Output " + (i + 2)),
                 screenIndex: o.screenIndex || 0,
+                // Always written (empty when the save has none): set() keeps
+                // roles it isn't given, and a leftover key from the previous
+                // profile would send this canvas to the wrong display.
+                screenKey: o.screenKey || "",
                 mode: mode
             })
             const w = outputInst.objectAt(i)
             if (!w)
                 continue
-            if (mode !== 1 && o.ww !== undefined && o.ww > 200) {
-                w.x = o.wx
-                w.y = o.wy
-                w.width = o.ww
-                w.height = o.wh
-            }
+            // Windowed spot: display-relative when saved that way (also kept
+            // by fullscreen canvases for when they leave fullscreen), else
+            // the old absolute rectangle, kept on a display that exists now.
+            // ("missing": this machine's display is off — its home is kept
+            // and the window returns there when it's back.)
+            const res = w.restorePlacement(o, mode !== 1)
+            if (mode !== 1 && (res === "none" || res === "foreign")
+                    && o.ww !== undefined && o.ww > 200)
+                w.restoreLegacyRect(Qt.rect(o.wx, o.wy, o.ww, o.wh))
             w.canvas.applyTiles(o.tiles || [])
         }
         if (targetCanvas > outputModel.count)
@@ -660,6 +1003,13 @@ ApplicationWindow {
             keepCanvases: keepCanvases,
             remoteEnabled: remoteEnabled,
             remotePort: remotePort,
+            // Main window: display mode, fullscreen monitor (identity +
+            // index) and its windowed spot (display-relative).
+            displayMode: displayMode,
+            fsScreenIndex: fsScreenIndex,
+            fsScreenKey: fsScreenKey,
+            alwaysOnTop: alwaysOnTop,
+            mainGeom: mainPlacement.capture(fsActive ? savedGeom : null),
             currentProfile: currentProfile,
             targetCanvas: targetCanvas,
             tiles: canvas.captureTiles(),
@@ -695,6 +1045,15 @@ ApplicationWindow {
                 remoteEnabled = s.remoteEnabled === true
                 if (s.remotePort !== undefined)
                     remotePort = s.remotePort
+                // Main window placement (saved since 0.7.1).
+                if (s.fsScreenIndex !== undefined)
+                    fsScreenIndex = s.fsScreenIndex
+                fsScreenKey = s.fsScreenKey || ""
+                alwaysOnTop = s.alwaysOnTop === true
+                if (s.mainGeom)
+                    mainPlacement.restore(s.mainGeom, s.displayMode !== 1)
+                if (s.displayMode === 1 || s.displayMode === 2)
+                    displayMode = s.displayMode
                 currentProfile = s.currentProfile || ""
                 canvas.applyTiles(s.tiles || [])
                 applyOutputs(s.outputs)
@@ -953,13 +1312,37 @@ ApplicationWindow {
                         Repeater {
                             model: outputModel
 
-                            ToolBtn {
+                            Row {
                                 required property int index
                                 required property string name
-                                label: name
-                                height: 24
-                                active: window.targetCanvas === index + 1
-                                onActivated: window.targetCanvas = index + 1
+                                required property bool missing
+                                spacing: 2
+
+                                ToolBtn {
+                                    // ⚠ = its fullscreen display isn't connected
+                                    // (the canvas waits, hidden, until it is).
+                                    label: (parent.missing ? "⚠ " : "") + parent.name
+                                    height: 24
+                                    active: window.targetCanvas === parent.index + 1
+                                    onActivated: window.targetCanvas = parent.index + 1
+                                }
+                                // Show a waiting canvas here as a normal window for
+                                // now (not saved; it returns to fullscreen by
+                                // itself when its display is back).
+                                ToolBtn {
+                                    visible: parent.missing
+                                    label: {
+                                        outputInst.count
+                                        const w = outputInst.objectAt(parent.index)
+                                        return w && w.showHere ? "Hide" : "Show"
+                                    }
+                                    height: 24
+                                    onActivated: {
+                                        const w = outputInst.objectAt(parent.index)
+                                        if (w)
+                                            w.showHere = !w.showHere
+                                    }
+                                }
                             }
                         }
                         ToolBtn {
@@ -1242,6 +1625,9 @@ ApplicationWindow {
         delegate: OutputWindow {
             outputName: model.name
             screenIndex: model.screenIndex
+            screenKey: model.screenKey || ""
+            displays: displayMgr
+            fitHelper: w => window.uncoveredScreen(w)
             windowMode: model.mode
             isTarget: window.targetCanvas === index + 1
             snapOn: window.snapOn
@@ -1262,8 +1648,12 @@ ApplicationWindow {
             }
             onModeChangeRequested: m =>
                 outputModel.setProperty(index, "mode", m)
-            onScreenPicked: si =>
-                outputModel.setProperty(index, "screenIndex", si)
+            onScreenPicked: s => window.pickOutputScreen(index, s)
+            onDisplayMissingChanged: {
+                outputModel.setProperty(index, "missing", displayMissing)
+                remote.broadcast("EVENT DISPLAY " + outputName + " "
+                                 + (displayMissing ? "MISSING" : "OK"))
+            }
             onTargetRequested: window.targetCanvas = index + 1
             onTilesMutated: window.canvasRevision++
         }
@@ -1426,28 +1816,50 @@ ApplicationWindow {
             }
 
             Text {
-                visible: Qt.application.screens.length > 1
+                visible: fsMonitorRep.count > 1
                 text: "FULLSCREEN MONITOR"
                 color: "#5a5a60"
                 font.pixelSize: 10
             }
             Column {
-                visible: Qt.application.screens.length > 1
+                visible: fsMonitorRep.count > 1
                 width: parent.width
                 spacing: 2
 
+                // Numbered left to right as the displays are arranged, and
+                // highlighted by identity — both stay right when the OS
+                // reorders its display list after a reboot.
                 Repeater {
-                    model: Qt.application.screens
+                    id: fsMonitorRep
+                    model: displayMgr.screens
 
                     ToolBtn {
                         required property int index
                         required property var modelData
                         width: parent.width
-                        label: (index + 1) + ": " + modelData.name
-                        active: window.fsScreenIndex === index
-                        onActivated: window.fsScreenIndex = index
+                        label: {
+                            displayMgr.revision
+                            return (index + 1) + ": " + displayMgr.describe(modelData)
+                        }
+                        active: {
+                            displayMgr.revision
+                            return window.fsTargetScreen() === modelData
+                        }
+                        opacity: displayMgr.settling ? 0.4 : 1
+                        onActivated: {
+                            if (!displayMgr.settling)
+                                window.pickFsScreen(modelData)
+                        }
                     }
                 }
+            }
+            Text {
+                visible: window.fsParked
+                width: parent.width
+                wrapMode: Text.WordWrap
+                text: "The fullscreen monitor isn't connected — showing as a window until it's back."
+                color: "#d8a040"
+                font.pixelSize: 11
             }
 
             Text {
@@ -1560,6 +1972,50 @@ ApplicationWindow {
                 label: "Check for updates at startup"
                 checked: window.checkUpdates
                 onToggled: window.checkUpdates = !window.checkUpdates
+            }
+            // Show machines (macOS 15.5+): exempt the NDI network from the
+            // per-app Local Network check, which macOS can get stuck on
+            // after a restart. Off unless someone turns it on here; asks
+            // for the Mac's administrator password; applies after restart.
+            CheckRow {
+                visible: localNet.supported
+                label: "Always allow the NDI network"
+                checked: localNet.enabled
+                onToggled: localNet.setEnabled(!localNet.enabled)
+            }
+            Text {
+                visible: localNet.supported
+                width: parent.width
+                wrapMode: Text.WordWrap
+                color: localNet.lastError !== "" ? "#d8a040" : "#8a8a90"
+                font.pixelSize: 11
+                text: {
+                    if (localNet.busy)
+                        return "Waiting for the administrator password…"
+                    if (localNet.lastError !== "")
+                        return localNet.lastError
+                    const nets = localNet.networks.join(", ")
+                    if (localNet.enabled)
+                        return (localNet.restartPending ? "On — restart the Mac to apply. " : "On. ")
+                            + "Any app may reach " + nets + " without the Local Network permission."
+                            + (localNet.uncovered.length > 0
+                               ? " Not included: " + localNet.uncovered.join(", ")
+                                 + " (connected now) — add it below."
+                               : "")
+                    if (localNet.restartPending)
+                        return "Off — restart the Mac to apply."
+                    return nets === ""
+                        ? "For show Macs: stops macOS blocking NDI after a restart. No network found right now."
+                        : "For show Macs: stops macOS blocking NDI after a restart, by letting any app"
+                          + " reach " + nets + ". Needs the Mac's admin password and a restart."
+                }
+            }
+            ToolBtn {
+                // Moved to another network while on: allow that one too.
+                visible: localNet.supported && localNet.enabled
+                         && localNet.uncovered.length > 0 && !localNet.busy
+                label: "Add this network"
+                onActivated: localNet.addCurrent()
             }
             CheckRow {
                 // Windows-only for now: the macOS equivalent (Login
@@ -1982,5 +2438,74 @@ ApplicationWindow {
             }
         }
     }
-}
 
+    // Shown while the NDI watchdog finds sources visible but unconnectable.
+    Rectangle {
+        id: ndiBanner
+        visible: window.ndiBlocked
+        z: 1000
+        anchors.top: parent.top
+        anchors.topMargin: 12
+        anchors.horizontalCenter: parent.horizontalCenter
+        width: Math.min(720, parent.width - 32)
+        height: bannerCol.implicitHeight + 24
+        radius: 4
+        color: "#2a2010"
+        border.width: 1
+        border.color: "#d8a040"
+
+        // Swallow clicks, drags, hover and scrolling, so nothing under the
+        // banner (tiles, sidebar) reacts to them. Declared first, so the
+        // button below stays on top.
+        MouseArea {
+            anchors.fill: parent
+            hoverEnabled: true
+            acceptedButtons: Qt.AllButtons
+            onWheel: wheel => wheel.accepted = true
+        }
+
+        Column {
+            id: bannerCol
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.margins: 12
+            spacing: 8
+
+            Text {
+                width: parent.width
+                wrapMode: Text.WordWrap
+                color: "#f0d090"
+                font.pixelSize: 14
+                font.bold: true
+                text: "Mosaic can see the NDI® sources but can't connect to any of them."
+            }
+            Text {
+                width: parent.width
+                wrapMode: Text.WordWrap
+                color: "#d8d8dc"
+                font.pixelSize: 12
+                text: Qt.platform.os === "osx"
+                    ? "macOS is most likely blocking Mosaic's local network access. If macOS just"
+                      + " asked whether Mosaic may find devices on your local network, click Allow."
+                      + " Otherwise this is a known macOS issue after a restart — fix: System Settings"
+                      + " → Privacy & Security → Local Network → turn Mosaic off, then on again."
+                      + " Mosaic reconnects by itself."
+                      + (localNet.supported
+                         && (!localNet.enabled || localNet.uncovered.length > 0)
+                         ? (localNet.enabled
+                            ? " This network isn't covered yet: Settings → Add this network."
+                            : " To stop this on a show Mac: Settings → Always allow the NDI network.")
+                         : "")
+                    : "Something is blocking Mosaic's network connections — check that Windows"
+                      + " Firewall allows Mosaic on this network. Mosaic keeps retrying."
+            }
+            ToolBtn {
+                visible: Qt.platform.os === "osx"
+                label: "Open Local Network settings"
+                onActivated: Qt.openUrlExternally(
+                    "x-apple.systempreferences:com.apple.preference.security?Privacy_LocalNetwork")
+            }
+        }
+    }
+}

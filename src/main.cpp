@@ -7,6 +7,14 @@
 
 int main(int argc, char *argv[])
 {
+#ifdef Q_OS_MACOS
+    // On macOS, Qt's window raise() also brings the whole app to the front.
+    // Mosaic re-raises its fullscreen covers whenever displays change (TVs
+    // waking etc.), which would keep stealing focus from the operator. With
+    // this off, raise() only orders the window; MacWindow activates the app
+    // itself the one time a cover first appears.
+    qputenv("QT_MAC_SET_RAISE_PROCESS", "0");
+#endif
     QGuiApplication app(argc, argv);
     QGuiApplication::setApplicationName("Mosaic");
     QGuiApplication::setOrganizationName("Cinertia Systems");

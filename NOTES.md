@@ -12,6 +12,128 @@ approval from the NDI team, so everything internal uses this codename for now.
 Easy to rename later.
 
 ## Current status
+**0.7.1 — published as a macOS pre-release (v0.7.1, 2026-11-19, not
+latest; Mosaic-0.7.1.dmg from commit 5f026cc on branch display-identity,
+pull request #1).** Show Mac tested: Always allow the NDI network on, several
+restarts, working. Windows check passed 2026-11-20 (live NDI sources,
+canvas and main-window fullscreen on picked monitors, Always on top while
+fullscreen, restore after restart, no macOS-only switch in Settings).
+Remaining: merge PR #1 (Max's OK), then promote v0.7.1 to a full release
+with the Windows installer and guide PDF (and mark it latest). The macOS
+dmg on the pre-release predates the Windows-only fix (4364296), which
+doesn't change the Mac build's behaviour.
+
+**0.7.1 Windows check (2026-11-19, Windows 11 ARM VM in Parallels on
+the Mac, building x64).** Built clean with MSVC 19.44 (VS 2022 Build
+Tools 17.14, Qt 6.8.3 msvc2022_64 in `C:\Qt`, source cloned to
+`C:\src\cinertia-mosaic`); no compile fixes needed. The NDI 6 SDK
+installer put itself in `C:\Program Files (x86)\NDI\NDI 6 SDK` here, so
+configure with `-DNDI_SDK_DIR="C:/Program Files (x86)/NDI/NDI 6 SDK"`.
+One Windows-only fix: without display ids, `resolve()` says "fallback"
+both for a display from another PC and for this PC's own display that
+is off at launch, and `WindowPlacement.restore()` treated both as
+foreign — clearing the saved spot, which the next autosave then
+overwrote. DisplayManager now remembers the EDID/name signatures of
+displays this PC has used (`displays/knownSignatures`, Windows only) and
+`usedHere(key)` lets restore() keep the home as "missing", like macOS.
+Windows' generic `\\.\DISPLAYn` names (displays with no name of their
+own) are never remembered — Windows renumbers them — so those keys keep
+the old absolute-rectangle restore.
+Fullscreen behaviour is unchanged (Windows still never hides an
+output). Tested by faking a known-but-off display in the session: kept
+with the fix, overwritten without; a layout from another PC still
+counts as foreign.
+
+**0.7.1 — displays remembered by identity (2026-11-19, Mac
+session).** Fixes the show Mac's TVs swapping after a reboot and covers not
+refitting when a display changes. Windows used to store their fullscreen
+display only as an index into the OS display list, which macOS reorders
+after a reboot (the 0.6.8 log showed "screen 1" alternating between the two
+"BMD HDMI" portrait TVs), and only re-applied on display add/remove, never
+on a resolution/rotation change. New: `src/DisplayManager` (QML type
+`Displays`, one instance `displayMgr` in Main.qml — id deliberately not
+`displays`, which is a property on OutputWindow and would bind to itself),
+per-platform identity in `src/DisplayIdentity*` (macOS: CGDisplay UUID
+matched through NSScreen name+frame; Windows: EDID fields, falls back to the
+old index so nothing that showed before is ever hidden), `qml/
+WindowPlacement.qml` (windowed spot relative to a display). Fullscreen
+canvases whose display is missing hide (sidebar ⚠ + temporary Show) and come
+back when it reconnects; covers re-fit after display changes; a self-check
+re-applies if a cover drifts. Main window mode/monitor/geometry now saved.
+Remote: `OUTSCREEN n <canvas>`, STATUS `missing`, `EVENT DISPLAY`. A rolling
+`displays.log` (app data folder) records every settled layout with each
+display's id — use it to confirm the UUIDs stay stable across reboots on
+the show Mac. Max must re-pick each canvas's monitor once after updating
+(old saves have no identity). Built and tested on a one-display MacBook
+(cover/hide/profile-switch/OUTSCREEN verified via remote control); needs
+the show-Mac test (reboots, TV unplug/replug) and a Windows build check.
+Windows build note: new QML type `Displays` — if the app dies with
+"Displays is not a type", delete the stale `build/mosaic_qmltyperegistrations.cpp`
+(see below).
+
+**Memory "leak" on the show Mac (2026-11-19): spikes, now capped.** A full
+hunt found no true leak: five-lens code review (every finding verified) plus
+measurements on the MacBook with three local 1080p60 test senders — flat for
+minutes visible, hidden behind other windows and with the display asleep;
+200 profile switches (~700 receiver create/destroy) left memory lower and
+`leaks` reported < 1 KB. The real problem: each video frame (~4 MB) was
+queued to the GUI thread as its own event, so any GUI/render stall (display
+reconfiguring, Metal waiting for a drawable) piled frames up at frame rate —
+a 10 s stall took the old build from 393 MB to 1.19 GB (released only
+minutes later). Fix: `FrameMailbox` in `src/ndi/NdiVideoItem.h` — one
+waiting frame per tile, at most one wake-up queued; the same stall now stays
+flat. Also `RemoteControl`: TCP keep-alive and dropping clients that stop
+reading. Test tooling used: a tiny NDI test sender (UYVY 1080p60 moving bar,
+built against the SDK) and a remote-control stall hook in throwaway builds
+only.
+
+**NDI broken after the show Mac restarts (2026-11-19): macOS bug, now
+detected.** The 0.6.8 log shows it after both Nov 7 restarts: the finder
+saw all sources but no receiver ever connected (connections=0 forever,
+even after relaunching; reinstalling fixed it until the next restart).
+Researched (Apple TN3179 + DTS forum threads 809211, 769037, 792453,
+FB21858319): macOS can cache a wrong Local Network "deny" after boot and
+keeps blocking the app until its Local Network switch is toggled; relaunch
+doesn't clear it; login-item launch and ad-hoc signing make it likelier.
+Discovery still works because libndi browses through the system's
+mDNSResponder (`nm -u` shows DNSServiceBrowse/Resolve/GetAddrInfo) —
+earlier notes saying NDI "does its own mDNS" were wrong — while receiver
+sockets are Mosaic's own and get blocked. Mosaic can't clear the block, so
+Main.qml now has a watchdog: no tile connected while ≥1 tile's source is
+visible for 20 s → banner with the fix, `displays.log` entry, STATUS
+`ndiBlocked`, `EVENT NDI BLOCKED/OK`, and receivers re-created every 30 s
+until a tile connects. Tested with fake NDI announcements (dns-sd -R
+"<HOST> (Ghost n)" _ndi._tcp … groups=public — that TXT record is what
+libndi needs to list them). Permanent fix (TN3179, macOS 15.5+) is now a Settings switch, "Always
+allow the NDI network" (`src/LocalNetworkAccess`, QML `localNet`): detects
+the connected IPv4 networks (en* interfaces; Ethernet vs Wi-Fi via
+SystemConfiguration), runs `resources/localnetwork.sh` as root through
+osascript "with administrator privileges" (the macOS admin prompt) to add
+or remove them in `com.apple.network.local-network`
+Allowed{Ethernet,WiFi}LocalNetworkAddresses, keeping other entries.
+Stored in root's preferences (check: `sudo defaults read
+com.apple.network.local-network`), so Mosaic can't read it back: the
+script prints ADDED/HAD per range and Mosaic records only those
+(QSettings localNetwork/*) — off removes only ADDED ranges, so
+pre-existing entries are never touched — plus kern.bootsessionuuid to show
+"restart to apply" until the next boot. "Add this network" covers a new
+venue's network while on. Off by default. Tested end to end (script,
+quoting, process, record, fresh and pre-existing entries) against a
+user-level test domain without the admin prompt; the real switch has not
+been flipped on any machine yet.
+Long-term: Developer ID signing + notarization (stable identity).
+
+**Mac build on the MacBook (2026-11-19):** tools live in
+`~/Developer/Mosaic-Mac/` (Homebrew CMake + Ninja, Qt 6.8.3 via aqtinstall,
+NDI SDK 6.4 at `/Library/NDI SDK for Apple`). Build with
+`~/Developer/Mosaic-Mac/build-mosaic.sh` (add `run` to launch): it copies
+the git-tracked source out of the Google Drive folder first (giving changed
+files a fresh timestamp, so the build never skips them), because Qt's
+QML scanner walks every file in the source folder and Drive downloads each
+on demand (the build hung for 10+ minutes). The local Qt has a one-line
+patch in `lib/cmake/Qt6/FindWrapOpenGL.cmake` (macOS 27's SDK has no AGL
+framework, which Qt 6.8.3 links).
+
 **Current release: 0.7.0 — the macOS NDI + fullscreen fix release,
 confirmed by Max on his production machine (2026-08-12).** Everything
 from the 0.6.7/0.6.8 diagnostic line, stabilized, with all diagnostic
@@ -416,10 +538,11 @@ Enable in settings, default port 9955. One command per line:
 | `PROFILEINDEX 2` | switch to the 2nd profile in the list |
 | `LAYOUT 2x2` | apply a layout (2x2, 3x3, 4x4, 1+side, 2+8, 2+1) |
 | `MODE fullscreen` | display mode (windowed, fullscreen, windowless) |
-| `FSSCREEN 2` | pick the fullscreen monitor (1-based) |
+| `FSSCREEN 2` | pick the main window's fullscreen monitor (1-based, displays numbered left to right) |
+| `OUTSCREEN 2 Right TV` | send the canvas named "Right TV" to monitor 2 (left to right) |
 | `PING` | connectivity check |
 | `PROFILES?` | replies `PROFILES ["Show A","Show B"]` (JSON list) |
-| `STATUS?` | replies `STATUS {"profile":"Show A","mode":"windowed","tiles":3}` |
+| `STATUS?` | replies `STATUS {"profile":"Show A","mode":"windowed","tiles":3,"displays":2,"missing":[]}` (`missing` = canvases waiting for a disconnected display) |
 Mosaic replies `OK` or `ERR ...` per action command. Commands are
 case-insensitive.
 
@@ -428,6 +551,7 @@ what caused them (sidebar click, hotkey, another controller):
 - `EVENT PROFILE Show A` — active profile changed
 - `EVENT PROFILES ["..."]` — the profile list changed
 - `EVENT MODE fullscreen` — display mode changed
+- `EVENT DISPLAY Right TV MISSING` / `OK` — a canvas's fullscreen display disconnected / returned
 This is the foundation for a future native Companion module with active-
 profile button feedback (see the project roadmap).
 
@@ -463,7 +587,10 @@ for a TapHandler missing that policy.
 | `src/ndi/NdiVideoItem.h/.cpp` | The video tile. Each one runs its own background thread that receives one NDI stream (using NDI's frame-sync for smooth timing) and draws the frames on screen, letterboxed to the correct aspect ratio. Also owns the view math: zoom/pan/rotate are a transform matrix on the video rectangle, crop is a "window" into the video texture — all GPU work. |
 | `qml/Main.qml` | The main window: source sidebar (click to add/remove tiles, required ndi.video link), layout presets + snap toggle, the CANVASES section (multi-monitor), profiles, settings, and all persistence. |
 | `qml/TileCanvas.qml` | One tile canvas — tiles, selection, snap grid, preset layouts, profile capture/apply. The main window has one; every extra output window has its own. |
-| `qml/OutputWindow.qml` | An extra output window (multi-monitor mode): wraps a TileCanvas, hover chrome at the top edge (monitor picker, fullscreen, close), Esc/F11 handling. |
+| `qml/OutputWindow.qml` | An extra output window (multi-monitor mode): wraps a TileCanvas, hover chrome at the bottom edge (monitor picker, fullscreen, close), Esc/F11 handling, and the fullscreen logic: find its display by identity, cover it exactly, hide while it's disconnected, self-check. |
+| `qml/WindowPlacement.qml` | Remembers where a window sits when not fullscreen — which display (by identity) and where on it — and puts it back after a restart or reconnect. Ignores moves the OS makes during display changes. |
+| `src/DisplayManager.h/.cpp` | QML type `Displays`: recognises displays by identity (saved "keys"), numbers them left to right, reports when the display layout has settled after a change (boot, wake, plug, rotate), keeps `displays.log`. |
+| `src/DisplayIdentity.h`, `DisplayIdentityMac.mm`, `DisplayIdentityOther.cpp` | The per-platform part: macOS reads each display's permanent UUID; elsewhere the monitor's EDID make/model/serial. |
 | `qml/Tile.qml` | One tile on the canvas: hover header (drag to move, rotate/crop/fit/close buttons), ⋯ menu (rename, options, change source), corner resize grips, snap-to-grid logic, crop overlay. The live video inside is a `VideoView` from NdiVideoItem. |
 | `.gitignore` | Tells git to ignore build output and editor junk. |
 | `build/` | (created during builds) Compiled output. Never edited by hand, safe to delete. |

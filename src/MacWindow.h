@@ -2,6 +2,7 @@
 
 #include <QObject>
 #include <QQuickWindow>
+#include <QRectF>
 #include <QtQml/qqmlregistration.h>
 
 // Raises a window above the macOS menu bar so a borderless fullscreen output
@@ -16,7 +17,14 @@ class MacWindow : public QObject
 public:
     explicit MacWindow(QObject *parent = nullptr);
 
-    // on = true: lift the window above the menu bar (fullscreen cover).
+    // on = true: lift the window above the menu bar and fit it exactly to
+    // the display at `target` (Qt global coordinates — the display the
+    // caller chose; the cover is never stretched over any other display).
     // on = false: return it to the normal window level.
-    Q_INVOKABLE void setCoversMenuBar(QQuickWindow *window, bool on);
+    Q_INVOKABLE void setCoversMenuBar(QQuickWindow *window, bool on,
+                                      const QRectF &target = QRectF());
+    // True when the window really is covering `target` above the menu bar
+    // (frame and level) — for the fullscreen self-check. Always true on
+    // non-macOS builds.
+    Q_INVOKABLE bool isCovering(QQuickWindow *window, const QRectF &target) const;
 };

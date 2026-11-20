@@ -3,6 +3,21 @@
 #include <QTcpServer>
 #include <QTcpSocket>
 
+namespace {
+// A client that stops reading (e.g. a Companion computer that vanished
+// without closing the connection) must not make Mosaic buffer pushed
+// EVENT lines forever: past this, the connection is dropped.
+constexpr qint64 kMaxPendingBytes = 256 * 1024;
+
+bool tooFarBehind(QTcpSocket *socket)
+{
+    if (socket->bytesToWrite() <= kMaxPendingBytes)
+        return false;
+    socket->abort(); // emits disconnected -> cleaned up in onNewConnection's handler
+    return true;
+}
+} // namespace
+
 RemoteControl::RemoteControl(QObject *parent)
     : QObject(parent)
     , m_server(new QTcpServer(this))
@@ -51,6 +66,10 @@ void RemoteControl::applyState()
 void RemoteControl::onNewConnection()
 {
     while (QTcpSocket *socket = m_server->nextPendingConnection()) {
+        // TCP keep-alive: the OS probes an idle connection, so a controller
+        // that vanished without closing it (network cable pulled, hard power
+        // off) is eventually detected and cleaned up instead of lingering.
+        socket->setSocketOption(QAbstractSocket::KeepAliveOption, 1);
         m_buffers.insert(socket, QByteArray());
         connect(socket, &QTcpSocket::readyRead,
                 this, [this, socket] { onReadyRead(socket); });
@@ -91,15 +110,18 @@ void RemoteControl::onReadyRead(QTcpSocket *socket)
 
 void RemoteControl::reply(const QString &line)
 {
-    if (m_lastClient && m_lastClient->state() == QTcpSocket::ConnectedState)
+    if (m_lastClient && m_lastClient->state() == QTcpSocket::ConnectedState
+            && !tooFarBehind(m_lastClient))
         m_lastClient->write(line.toUtf8() + '\n');
 }
 
 void RemoteControl::broadcast(const QString &line)
 {
     const QByteArray data = line.toUtf8() + '\n';
-    for (auto it = m_buffers.keyBegin(); it != m_buffers.keyEnd(); ++it) {
-        if ((*it)->state() == QTcpSocket::ConnectedState)
-            (*it)->write(data);
+    // Copy the list first: dropping a client edits m_buffers.
+    const QList<QTcpSocket *> clients = m_buffers.keys();
+    for (QTcpSocket *socket : clients) {
+        if (socket->state() == QTcpSocket::ConnectedState && !tooFarBehind(socket))
+            socket->write(data);
     }
 }

@@ -8,6 +8,11 @@ MacWindow::MacWindow(QObject *parent)
 {
 }
 
-void MacWindow::setCoversMenuBar(QQuickWindow *, bool)
+void MacWindow::setCoversMenuBar(QQuickWindow *, bool, const QRectF &)
 {
+}
+
+bool MacWindow::isCovering(QQuickWindow *, const QRectF &) const
+{
+    return true;
 }

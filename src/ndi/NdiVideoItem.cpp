@@ -122,8 +122,29 @@ void NdiReceiveWorker::shutdown()
     }
     m_streamInfo.clear();
     m_lastTimestamp = 0;
+    m_connections = 0;
+    if (m_connected) {
+        m_connected = false;
+        emit connectedChanged(false);
+    }
     m_levelLeft = 0.0f;
     m_levelRight = 0.0f;
+    // Free a frame still waiting to be shown.
+    QMutexLocker lock(&m_mailbox->mutex);
+    m_mailbox->frame = QImage();
+}
+
+void NdiReceiveWorker::publish(const QImage &frame, int uyvyWidth)
+{
+    {
+        QMutexLocker lock(&m_mailbox->mutex);
+        m_mailbox->frame = frame; // replaces any frame not yet shown
+        m_mailbox->uyvyWidth = uyvyWidth;
+    }
+    // One wake-up at a time: if the screen side hasn't taken the last one
+    // yet, it will pick up this newer frame when it does.
+    if (!m_mailbox->notified.exchange(true))
+        emit frameAvailable();
 }
 
 void NdiReceiveWorker::setCaptureAudio(bool enabled)
@@ -176,8 +197,7 @@ void NdiReceiveWorker::poll()
     m_lastFrameMs = m_aliveClock.elapsed();
 
     int uyvyWidth = 0;
-    const QImage wrapped = wrapFrame(frame, &uyvyWidth);
-    emit frameReady(wrapped, uyvyWidth);
+    publish(wrapFrame(frame, &uyvyWidth), uyvyWidth);
 
     const double fps = frame.frame_rate_D
         ? double(frame.frame_rate_N) / double(frame.frame_rate_D)
@@ -230,6 +250,11 @@ void NdiReceiveWorker::updateHealth()
         m_health = health;
         emit healthChanged(health);
     }
+    const bool connected = m_connections > 0;
+    if (connected != m_connected) {
+        m_connected = connected;
+        emit connectedChanged(connected);
+    }
 }
 
 void NdiReceiveWorker::pollDirect()
@@ -240,6 +265,10 @@ void NdiReceiveWorker::pollDirect()
     const auto recv = static_cast<NDIlib_recv_instance_t>(m_recv);
 
     // Drain whatever arrived since the last tick (a few frames at most).
+    // Only the newest video frame is handed on — older ones could never be
+    // shown anyway.
+    QImage newest;
+    int newestUyvyWidth = 0;
     for (int i = 0; i < 4; ++i) {
         NDIlib_video_frame_v2_t video;
         NDIlib_audio_frame_v3_t audio;
@@ -248,9 +277,7 @@ void NdiReceiveWorker::pollDirect()
 
         if (type == NDIlib_frame_type_video) {
             m_lastFrameMs = m_aliveClock.elapsed();
-            int uyvyWidth = 0;
-            const QImage wrapped = wrapFrame(video, &uyvyWidth);
-            emit frameReady(wrapped, uyvyWidth);
+            newest = wrapFrame(video, &newestUyvyWidth);
 
             const double fps = video.frame_rate_D
                 ? double(video.frame_rate_N) / double(video.frame_rate_D)
@@ -290,6 +317,8 @@ void NdiReceiveWorker::pollDirect()
             break; // nothing waiting
         }
     }
+    if (!newest.isNull())
+        publish(newest, newestUyvyWidth);
 }
 
 void NdiReceiveWorker::pollAudio()
@@ -355,15 +384,17 @@ NdiVideoItem::NdiVideoItem()
     setFlag(ItemHasContents, true);
     setAcceptedMouseButtons(Qt::LeftButton);
 
-    m_worker = new NdiReceiveWorker;
+    m_worker = new NdiReceiveWorker(m_mailbox);
     m_worker->moveToThread(&m_thread);
     connect(&m_thread, &QThread::finished, m_worker, &QObject::deleteLater);
-    connect(m_worker, &NdiReceiveWorker::frameReady,
-            this, &NdiVideoItem::onFrame, Qt::QueuedConnection);
+    connect(m_worker, &NdiReceiveWorker::frameAvailable,
+            this, &NdiVideoItem::takeFrame, Qt::QueuedConnection);
     connect(m_worker, &NdiReceiveWorker::statusChanged,
             this, &NdiVideoItem::onStatus, Qt::QueuedConnection);
     connect(m_worker, &NdiReceiveWorker::healthChanged,
             this, &NdiVideoItem::onHealth, Qt::QueuedConnection);
+    connect(m_worker, &NdiReceiveWorker::connectedChanged,
+            this, &NdiVideoItem::onConnected, Qt::QueuedConnection);
     connect(m_worker, &NdiReceiveWorker::audioLevels,
             this, &NdiVideoItem::onAudioLevels, Qt::QueuedConnection);
     m_thread.start();
@@ -399,11 +430,20 @@ void NdiVideoItem::setSourceName(const QString &name)
     }
 
     // Drop the last frame of the previous source and start the view fresh.
+    {
+        QMutexLocker lock(&m_mailbox->mutex);
+        m_mailbox->frame = QImage();
+    }
     m_pendingFrame = QImage();
     m_frameDirty = true;
     resetView();
 
     emit sourceNameChanged();
+}
+
+void NdiVideoItem::reconnect()
+{
+    updateConnection(true); // no-op without a source
 }
 
 void NdiVideoItem::resetView()
@@ -738,6 +778,22 @@ void NdiVideoItem::geometryChange(const QRectF &newGeometry,
     update();
 }
 
+void NdiVideoItem::takeFrame()
+{
+    QImage frame;
+    int uyvyWidth = 0;
+    {
+        QMutexLocker lock(&m_mailbox->mutex);
+        // Re-arm first, under the lock: a frame published after this point
+        // posts a fresh wake-up.
+        m_mailbox->notified = false;
+        frame.swap(m_mailbox->frame);
+        uyvyWidth = m_mailbox->uyvyWidth;
+    }
+    if (!frame.isNull())
+        onFrame(frame, uyvyWidth);
+}
+
 void NdiVideoItem::onFrame(const QImage &frame, int uyvyWidth)
 {
     m_pendingFrame = frame;
@@ -759,6 +815,14 @@ void NdiVideoItem::onHealth(int health)
         return;
     m_health = health;
     emit healthChanged();
+}
+
+void NdiVideoItem::onConnected(bool connected)
+{
+    if (connected == m_connected)
+        return;
+    m_connected = connected;
+    emit connectedChanged();
 }
 
 void NdiVideoItem::onStatus(const QString &status)

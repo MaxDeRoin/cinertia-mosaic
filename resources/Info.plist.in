@@ -5,9 +5,9 @@
      default with the Local Network privacy description string.
 
      NOTE: we deliberately do NOT declare an NSBonjourServices _ndi._tcp
-     entry. NDI's runtime does its own mDNS discovery (it doesn't use
-     Apple's Bonjour/NSNetService API), so the official NDI Tools don't
-     declare it either. Declaring it registered Mosaic as an _ndi._tcp
+     entry. NDI discovery works without it (libndi browses through the
+     system's DNS-SD service; verified since 0.6.8), and the official NDI
+     Tools don't declare it either. Declaring it registered Mosaic as an _ndi._tcp
      consumer in the Local Network privacy layer as soon as the app was on
      disk, which — for an unnotarized app — could wedge _ndi._tcp discovery
      machine-wide until the app was deleted. -->

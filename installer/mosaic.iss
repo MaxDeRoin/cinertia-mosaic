@@ -2,7 +2,7 @@
 ; Build with: ISCC.exe mosaic.iss  (after staging the deploy\ folder)
 
 #define MyAppName "Mosaic"
-#define MyAppVersion "0.7.0"
+#define MyAppVersion "0.7.1"
 #define MyAppPublisher "Cinertia Systems"
 #define MyAppExeName "Mosaic.exe"
 

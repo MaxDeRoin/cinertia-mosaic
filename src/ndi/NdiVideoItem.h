@@ -2,13 +2,32 @@
 
 #include <QElapsedTimer>
 #include <QImage>
+#include <QMutex>
 #include <QPointF>
 #include <QQuickItem>
 #include <QRectF>
 #include <QThread>
 #include <QtQml/qqmlregistration.h>
 
+#include <atomic>
+#include <memory>
+
 class QTimer;
+
+// Single-slot hand-off of the newest video frame from a tile's receive
+// thread to the screen side. The receiver replaces whatever frame is waiting
+// (only the newest can ever be shown) and posts at most ONE wake-up until the
+// screen side has taken it. So however long the screen side is held up — a
+// display reconfiguring, the GPU waiting for a drawable, a busy moment — at
+// most one waiting frame per tile exists, instead of a queue of multi-MB
+// frames growing at the source's frame rate.
+struct FrameMailbox
+{
+    QMutex mutex;
+    QImage frame;          // newest frame not yet taken (null if none)
+    int uyvyWidth = 0;     // see NdiReceiveWorker::frameAvailable
+    std::atomic_bool notified{false};
+};
 
 // Runs on its own thread. Owns the NDI receiver and frame sync for one
 // source, pulls video frames at display rate, and hands them to the GUI
@@ -17,20 +36,28 @@ class NdiReceiveWorker : public QObject
 {
     Q_OBJECT
 
+public:
+    explicit NdiReceiveWorker(std::shared_ptr<FrameMailbox> mailbox)
+        : m_mailbox(std::move(mailbox)) {}
+
 public slots:
     void start(const QString &sourceName, bool lowBandwidth, bool lowLatency);
     void shutdown();
     void setCaptureAudio(bool enabled);
 
 signals:
-    // uyvyWidth > 0: `frame` carries packed UYVY bytes as an RGBA image of
-    // width/2 (converted to RGB on the GPU); 0: a regular BGRA image.
-    void frameReady(const QImage &frame, int uyvyWidth);
+    // A new frame is in the mailbox. In the mailbox, uyvyWidth > 0 means the
+    // frame carries packed UYVY bytes as an RGBA image of width/2 (converted
+    // to RGB on the GPU); 0 means a regular BGRA image.
+    void frameAvailable();
     void statusChanged(const QString &status);
     // 0 = healthy (connected to a sender), 2 = down (no connection, or
     // nothing received yet). Tied to the connection, not picture motion, so
     // a static source stays healthy. (1 = stalling is no longer emitted.)
     void healthChanged(int health);
+    // Whether the receiver holds a connection to a sender at all (frames or
+    // not) — what the network watchdog needs.
+    void connectedChanged(bool connected);
     void audioLevels(qreal left, qreal right);
 
 private:
@@ -40,7 +67,9 @@ private:
     void pollAudio();
     void updateLevels(float peakL, float peakR);
     void setStatus(const QString &status);
+    void publish(const QImage &frame, int uyvyWidth);
 
+    std::shared_ptr<FrameMailbox> m_mailbox;
     void *m_recv = nullptr;      // NDIlib_recv_instance_t
     void *m_framesync = nullptr; // NDIlib_framesync_instance_t
     QTimer *m_timer = nullptr;
@@ -53,6 +82,7 @@ private:
     qint64 m_lastFrameMs = 0;     // 0 = nothing received yet
     qint64 m_lastConnCheckMs = -10000;
     int m_connections = 0;
+    bool m_connected = false;
     int m_health = -1;
     QString m_status;
     QString m_streamInfo;
@@ -81,6 +111,8 @@ class NdiVideoItem : public QQuickItem
     // (connected), 2 = down (no connection / still connecting). Based on the
     // NDI connection, so a static picture stays healthy.
     Q_PROPERTY(int health READ health NOTIFY healthChanged)
+    // True while connected to a sender (even before the first frame).
+    Q_PROPERTY(bool connected READ connected NOTIFY connectedChanged)
     Q_PROPERTY(qreal viewRotation READ viewRotation NOTIFY viewChanged)
     Q_PROPERTY(bool cropped READ cropped NOTIFY viewChanged)
     // Alt+scroll rotation. On by default; the future settings menu gets a
@@ -108,6 +140,7 @@ public:
     void setSourceName(const QString &name);
     QString status() const { return m_status; }
     int health() const { return m_health; }
+    bool connected() const { return m_connected; }
     QSize videoSize() const { return m_videoSize; }
     qreal zoomLevel() const { return m_zoom; }
     qreal viewRotation() const { return m_rotation; }
@@ -133,6 +166,9 @@ public:
     Q_INVOKABLE void rotateBy(qreal degrees);
     Q_INVOKABLE void applyCropFromItemRect(const QRectF &itemRect);
     Q_INVOKABLE void clearCrop();
+    // Drop and re-create the NDI receiver for the current source (used when
+    // macOS was blocking local network access and may have stopped).
+    Q_INVOKABLE void reconnect();
 
     // Snapshot/restore of the whole view for profiles and session restore.
     Q_INVOKABLE QVariantMap viewState() const;
@@ -142,6 +178,7 @@ signals:
     void sourceNameChanged();
     void statusChanged();
     void healthChanged();
+    void connectedChanged();
     void viewChanged();
     void wheelRotateEnabledChanged();
     void videoSizeChanged();
@@ -162,9 +199,11 @@ protected:
     void geometryChange(const QRectF &newGeometry, const QRectF &oldGeometry) override;
 
 private:
+    void takeFrame(); // a frame is waiting in the mailbox
     void onFrame(const QImage &frame, int uyvyWidth);
     void onStatus(const QString &status);
     void onHealth(int health);
+    void onConnected(bool connected);
     void onAudioLevels(qreal left, qreal right);
     QRectF fitRect() const;          // letterboxed quad, unrotated
     qreal rotationFitScale() const;  // rescales the rotated quad to fit
@@ -177,10 +216,12 @@ private:
     void evaluateAutoLow();
 
     QThread m_thread;
+    std::shared_ptr<FrameMailbox> m_mailbox = std::make_shared<FrameMailbox>();
     NdiReceiveWorker *m_worker = nullptr;
     QString m_sourceName;
     QString m_status;
     int m_health = 2; // down until the first frame arrives
+    bool m_connected = false;
     QImage m_pendingFrame;
     int m_pendingUyvyWidth = 0;  // 0 = BGRA frame
     bool m_nodeIsUyvy = false;   // which node type the scene graph holds
