@@ -116,7 +116,7 @@
     <div class="cover">
         <img src="../../resources/mosaic-logo.png" alt="Mosaic logo">
         <div>
-            <div class="title">Mosaic <span class="badge">v0.7.0</span></div>
+            <div class="title">Mosaic <span class="badge">v0.7.1</span></div>
             <div class="subtitle">Professional NDI® Multiviewer &nbsp;·&nbsp; User Guide &nbsp;·&nbsp; Cinertia Systems</div>
         </div>
     </div>
@@ -128,7 +128,7 @@
     <h3>Windows</h3>
     <div class="card">
         <ol>
-            <li>Run <code>Mosaic-Setup-0.7.0.exe</code> on 64-bit Windows 10 or 11 and follow the wizard. Everything Mosaic needs is included — there is nothing else to install.</li>
+            <li>Run <code>Mosaic-Setup-0.7.1.exe</code> on 64-bit Windows 10 or 11 and follow the wizard. Everything Mosaic needs is included — there is nothing else to install.</li>
             <li>Launch <strong>Mosaic</strong> from the Start Menu (or the optional desktop icon).</li>
             <li>The first time Mosaic runs, <strong>Windows Firewall</strong> will ask for network access — click <strong>Allow</strong>. NDI® discovery and video need it.</li>
         </ol>
@@ -136,12 +136,13 @@
     <h3>macOS</h3>
     <div class="card">
         <ol>
-            <li>Open <code>Mosaic-0.7.0.dmg</code> and drag <strong>Mosaic</strong> into the <strong>Applications</strong> folder shortcut beside it. Apple Silicon and Intel Macs are both supported (macOS 12 or newer).</li>
+            <li>Open <code>Mosaic-0.7.1.dmg</code> and drag <strong>Mosaic</strong> into the <strong>Applications</strong> folder shortcut beside it. Apple Silicon and Intel Macs are both supported (macOS 12 or newer).</li>
             <li>First launch: <strong>right-click Mosaic.app → Open → Open</strong>. A plain double-click is blocked the first time because this build is not notarized with Apple; right-click → Open is only needed once.</li>
             <li>When macOS asks <strong>"Allow Mosaic to find devices on local networks?" click Allow</strong> — NDI® discovery needs it. If missed, enable it later under System Settings → Privacy &amp; Security → Local Network.</li>
         </ol>
     </div>
-    <p>Everything in this guide works the same on both platforms. Where a shortcut says <kbd>Ctrl</kbd> or <kbd>Alt</kbd>, use <kbd>⌘ Cmd</kbd> / <kbd>⌥ Option</kbd> on the Mac.</p>
+    <div class="tip"><strong>Mac tiles black after a restart?</strong> See <strong>Troubleshooting</strong> — a known macOS issue can block Mosaic's network access after a restart.</div>
+    <p>Everything in this guide works the same on both platforms unless marked. Where a shortcut says <kbd>Ctrl</kbd> or <kbd>Alt</kbd>, use <kbd>⌘ Cmd</kbd> / <kbd>⌥ Option</kbd> on the Mac.</p>
 
     <h2>Quick start</h2>
     <div class="card">
@@ -233,17 +234,28 @@
     <ul>
         <li><strong>Add a canvas:</strong> click <strong>+ Add</strong> under <strong>CANVASES</strong>. A new window opens ("Output 2", "Output 3", …) — on a second monitor by default when one is connected.</li>
         <li><strong>Canvas targeting:</strong> the Canvases buttons choose which canvas sidebar source clicks and Layout presets act on. The blue source dots and the hint line ("→ Output 2") always show where new tiles will land.</li>
-        <li><strong>The canvas menu:</strong> hover an output's <strong>bottom edge</strong> and click the <b>⋯</b> button — it sits at the bottom so it can never cover a tile's menu. From there: <strong>rename</strong> the canvas (e.g. <em>STAGE LEFT WALL</em>), <strong>Send sources here</strong>, the <strong>window type</strong> (Windowed / Fullscreen / Windowless), an exact <strong>size</strong>, the <strong>monitor</strong> picker, and <strong>Close</strong>.</li>
+        <li><strong>The canvas menu:</strong> hover an output's <strong>bottom edge</strong> and click the <b>⋯</b> button — it sits at the bottom so it can never cover a tile's menu. From there: <strong>rename</strong> the canvas (e.g. <em>STAGE LEFT WALL</em>), <strong>Send sources here</strong>, the <strong>window type</strong> (Windowed / Fullscreen / Windowless), an exact <strong>size</strong>, the <strong>monitor</strong> picker (numbered left to right as your displays are arranged, with the picked display's name and size underneath), and <strong>Close</strong>.</li>
         <li><strong>Everything is remembered:</strong> profiles and the session store each canvas — tiles, name, window type, monitor, position. Switching profiles switches the whole multi-monitor look at once. Canvases not saved in the selected profile stay open unchanged by default (<strong>Settings → Keep canvases when switching profiles</strong> controls this).</li>
     </ul>
     <div class="tip"><strong>Multi-monitor profiles:</strong> add a canvas for each display, set each one fullscreen on its monitor from the ⋯ menu, add sources, then save the result as a profile — one profile (or one Stream Deck button) restores every display at once.</div>
+
+    <h3>Displays are remembered by identity</h3>
+    <p>Mosaic remembers <strong>which display</strong> each window belongs to — the display itself, not "monitor 2" — so after a restart or reboot every canvas comes back on the same TV even if the computer lists its displays in a different order.</p>
+    <ul>
+        <li><strong>Restart / reboot:</strong> each fullscreen canvas returns to its own display, and the main window returns to its mode, monitor and position. When Mosaic starts at login, windows wait for the displays to finish coming up, then place themselves.</li>
+        <li><strong>A display is disconnected</strong> (unplugged, powered off, HDMI standby) — <strong>macOS:</strong> its fullscreen canvas hides instead of jumping onto another screen. The sidebar marks it <b>⚠ name</b>; click <strong>Show</strong> to see it as a normal window for now (temporary, not saved). If the main window's fullscreen display goes, the main window shows as a normal window until it returns. <strong>Windows</strong> can't always tell a display that's switched off from a different one, so there the canvas shows on another display, as in earlier versions.</li>
+        <li><strong>The display comes back:</strong> the canvas returns to it by itself and is resized to fit it exactly — also when it comes back at a different resolution or rotation.</li>
+        <li><strong>Windowed canvases and the main window</strong> remember their display too and move back to it when it reconnects — also when it was off while Mosaic started. Dragging a window to another display makes that its new home.</li>
+        <li><strong>A replaced display</strong> of the same make and model (e.g. a swapped converter) is recognised automatically on macOS after the old one has been gone for about two minutes — never a display another window already uses.</li>
+    </ul>
+    <div class="tip"><strong>After updating from 0.7.0 or older:</strong> open each canvas's ⋯ menu and click its monitor once, and click the main window's fullscreen monitor in Settings once. Older versions only saved a monitor number; this locks each window to its actual display.</div>
 
     <h2>Settings <span class="accent">⚙</span></h2>
     <div class="figrow">
         <div>
     <table>
         <tr><th>Setting</th><th>What it does</th></tr>
-        <tr><td>Display mode + monitor</td><td>Windowed / Fullscreen / Windowless, and which screen fullscreen uses</td></tr>
+        <tr><td>Display mode + monitor</td><td>Windowed / Fullscreen / Windowless, and which display fullscreen uses (numbered left to right; remembered by identity)</td></tr>
         <tr><td>Window size</td><td>Set an exact window resolution</td></tr>
         <tr><td>Always on top</td><td>Mosaic floats over other windows</td></tr>
         <tr><td>Rotate with Alt+scroll</td><td>Enable/disable wheel rotation</td></tr>
@@ -251,6 +263,7 @@
         <tr><td>Allow duplicate sources</td><td>Off: clicks toggle a source on/off. On: each click adds another copy</td></tr>
         <tr><td>Stream status indicators</td><td>On (default): red dot on tiles that have lost their live connection to the source</td></tr>
         <tr><td>Hide mouse when idle</td><td>On (default): the cursor disappears over the canvas after 3 s without movement</td></tr>
+        <tr><td>Always allow the NDI network</td><td>macOS 15.5+, off by default. For show Macs: macOS can no longer block NDI after a restart (see Troubleshooting). Needs the admin password and a restart</td></tr>
         <tr><td>Show tile borders</td><td>On (default): the thin gray tile border. Turn off for a clean signage look on fullscreen displays</td></tr>
         <tr><td>Show tile controls</td><td>On (default): the top control bar on each tile. Turn off for a clean output display — the bar stays hidden even on mouse-over; turn back on to arrange tiles</td></tr>
         <tr><td>Auto low bandwidth for small tiles</td><td>On (default): small tiles automatically receive the lighter NDI® proxy stream — big CPU/network savings on dense grids</td></tr>
@@ -294,20 +307,41 @@
         <tr><th>Command</th><th>Action</th></tr>
         <tr><td><code>PROFILE Show A</code></td><td>Switch to a profile by name</td></tr>
         <tr><td><code>PROFILEINDEX 2</code></td><td>Switch to the 2nd profile in the list</td></tr>
-        <tr><td><code>LAYOUT 2x2</code></td><td>Apply a layout (2x2, 3x3, 4x4, 1+side, 2+8)</td></tr>
-        <tr><td><code>FSSCREEN 2</code></td><td>pick the fullscreen monitor (1-based), same as the monitor buttons in settings</td></tr>
+        <tr><td><code>LAYOUT 2x2</code></td><td>Apply a layout (2x2, 3x3, 4x4, 1+side, 2+8, 2+1)</td></tr>
+        <tr><td><code>FSSCREEN 2</code></td><td>Pick the main window's fullscreen monitor (1-based, left to right as the displays are arranged), same as the monitor buttons in settings</td></tr>
+        <tr><td><code>OUTSCREEN 2 Right TV</code></td><td>Send the canvas named "Right TV" to monitor 2 (left to right) — fixes a display assignment without touching the machine</td></tr>
         <tr><td><code>MODE fullscreen</code></td><td>windowed / fullscreen / windowless</td></tr>
-        <tr><td><code>PROFILES?</code> · <code>STATUS?</code> · <code>PING</code></td><td>Queries — Mosaic replies, and pushes EVENT lines on every state change</td></tr>
+        <tr><td><code>PROFILES?</code> · <code>STATUS?</code> · <code>PING</code></td><td>Queries — Mosaic replies, and pushes EVENT lines on every state change. <code>STATUS?</code> also reports <code>missing</code> (canvases waiting for a disconnected display) and <code>ndiBlocked</code></td></tr>
     </table>
+    <p>Pushed events include <code>EVENT PROFILE …</code>, <code>EVENT MODE …</code>, <code>EVENT DISPLAY &lt;canvas&gt; MISSING|OK</code> when a canvas's display disconnects or returns, and <code>EVENT NDI BLOCKED|OK</code> when network access is blocked or restored.</p>
 
     <h2>Notes</h2>
     <ul>
-        <li>Profiles and settings live in <code>%APPDATA%\Cinertia Systems\Mosaic\</code> — copy that folder to move your setups to another machine.</li>
+        <li>Profiles and settings live in <code>%APPDATA%\Cinertia Systems\Mosaic\</code> (Mac: <code>~/Library/Application Support/Cinertia Systems/Mosaic/</code>) — copy that folder to move your setups to another machine. The same folder holds <code>displays.log</code>, a small log of display changes for troubleshooting.</li>
         <li>Each tile is its own NDI receiver. For big walls, use <strong>Low bandwidth</strong> on small tiles.</li>
         <li>Learn more about NDI® at <a href="https://ndi.video/">ndi.video</a>.</li>
     </ul>
 
+    <h2>Troubleshooting</h2>
+    <h3>Tiles stay black after the Mac restarts (macOS)</h3>
+    <p><strong>What you see:</strong> the sources are listed in the sidebar, but every tile stays black with a red status dot, and Mosaic shows a banner saying it can see the NDI® sources but can't connect to any of them. Quitting and reopening doesn't help.</p>
+    <p><strong>Why:</strong> a known macOS issue. Right after a restart, macOS can wrongly decide that an app may not use the local network and keep blocking it. Finding sources still works, but connecting to them is blocked. It is most likely on a Mac that starts Mosaic at login.</p>
+    <div class="card">
+        <p><strong>Quick fix (each time it happens):</strong> click <strong>Open Local Network settings</strong> on the banner (or System Settings → Privacy &amp; Security → Local Network) and turn <strong>Mosaic off, then on again</strong>. The tiles come back within a few seconds — Mosaic keeps retrying by itself. No need to reinstall.</p>
+        <p><strong>Permanent fix for a dedicated show Mac (macOS 15.5+):</strong> in Settings ⚙ switch on <strong>Always allow the NDI network</strong>, enter the administrator password, then <strong>restart the Mac</strong>. Mosaic shows which network it allows (e.g. <code>192.168.10.0/24 (Ethernet)</code>). It applies Apple's documented exemption (Technote TN3179) for that network, for every app on the Mac, and changes nothing else. Switching it off removes exactly what Mosaic added. At a venue with a different network, click <strong>Add this network</strong>. Use it on show machines, not personal laptops.</p>
+    </div>
+    <p>Mosaic logs when this happens (and when it clears) in <code>displays.log</code>, and reports it over remote control (<code>STATUS?</code> → <code>ndiBlocked</code>, <code>EVENT NDI BLOCKED|OK</code>) so a Stream Deck button can show it.</p>
+
     <h2>What's new</h2>
+    <h3>0.7.1 — November 2026</h3>
+    <ul>
+        <li><strong>Displays remembered by identity:</strong> canvases come back on the right display after a reboot, even when the computer lists its displays in a different order; monitor pickers number displays left to right and show each display's name and size. After updating, click each canvas's monitor (and the main window's) once.</li>
+        <li><strong>Display changes handled:</strong> fullscreen refits a display that comes back at a different resolution or rotation; on macOS a fullscreen canvas whose display disconnects hides (⚠ in the sidebar, with a temporary Show) and returns by itself, and a replaced identical display is recognised.</li>
+        <li><strong>Main window remembers</strong> its mode, fullscreen monitor and position across restarts. Windows whose display is off at launch return when it comes back.</li>
+        <li><strong>No more memory spikes</strong> when drawing is held up (a TV in standby, a display reconfiguring): each tile keeps only its newest waiting frame.</li>
+        <li><strong>macOS network block detected:</strong> a banner with the fix when macOS blocks Mosaic's network access after a restart, plus the <strong>Always allow the NDI network</strong> setting for show Macs (macOS 15.5+).</li>
+        <li><strong>Remote control:</strong> <code>OUTSCREEN n &lt;canvas&gt;</code>, <code>STATUS?</code> <code>missing</code> / <code>ndiBlocked</code>, <code>EVENT DISPLAY</code> and <code>EVENT NDI</code>; connections that drop without closing are cleaned up.</li>
+    </ul>
     <h3>0.7.0 — August 2026</h3>
     <ul>
         <li><strong>macOS fixes:</strong> installing Mosaic can no longer interfere with NDI discovery machine-wide (upgrading from 0.6.7 or older needs a one-time cleanup — see the release notes); fullscreen lands on the picked display including at login, covers the display exactly, and covers the menu bar.</li>
@@ -375,7 +409,7 @@
 
     <div class="footer">
         <strong style="color:#8a8a90">Support:</strong> max@cinertia.systems &nbsp;·&nbsp; Cinertia.Systems<br>
-        Mosaic v0.7.0 — © 2026 Cinertia Systems. NDI® is a registered trademark of Vizrt NDI AB.
+        Mosaic v0.7.1 — © 2026 Cinertia Systems. NDI® is a registered trademark of Vizrt NDI AB.
     </div>
 
 </div>

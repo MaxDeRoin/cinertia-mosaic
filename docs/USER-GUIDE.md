@@ -296,30 +296,36 @@ displays in a different order.
   display, and the main window returns to its mode, monitor and
   position. With Mosaic in the login items, windows wait for the
   displays to finish coming up and then place themselves.
-- **A display is disconnected** (unplugged, powered off, HDMI standby):
-  its fullscreen canvas hides instead of jumping onto another screen.
-  The sidebar marks it **⚠ name**; click **Show** next to it to see it
-  as a normal window for now (temporary, not saved). STATUS? over remote
-  control lists it under `missing`.
+- **A display is disconnected** (unplugged, powered off, HDMI standby)
+  — macOS: its fullscreen canvas hides instead of jumping onto another
+  screen. The sidebar marks it **⚠ name**; click **Show** next to it to
+  see it as a normal window for now (temporary, not saved). STATUS? over
+  remote control lists it under `missing`.
+- **Windows** can't always tell a display that's switched off from a
+  different one, so there a fullscreen canvas whose display is off shows
+  on another display, as in earlier versions, and moves back to its own
+  display once that display is on again.
 - **The display comes back:** the canvas returns to it by itself and is
   resized to fit it exactly — also when it comes back at a different
   resolution or rotation.
-- If the **main window's** fullscreen display is disconnected, the main
-  window shows as a normal window on a free display (sidebar open) until
-  that display returns.
-- Windowed canvases also remember which display they were on and move
-  back to it when it reconnects. Dragging a window to another display
-  makes that its new home.
+- If the **main window's** fullscreen display is disconnected (macOS),
+  the main window shows as a normal window on a free display (sidebar
+  open) until that display returns.
+- Windowed canvases and the main window also remember which display
+  they were on and move back to it when it reconnects — also when it was
+  off while Mosaic started. Dragging a window to another display makes
+  that its new home.
 - A replaced display (e.g. a swapped converter of the same make and
-  model) is recognised automatically once the old one has been gone for
-  about two minutes — but only a display no window has used before, so
-  an unplugged TV's picture never moves onto a TV that's in use. If the
-  original comes back, everything returns to it.
+  model) is recognised automatically on macOS once the old one has been
+  gone for about two minutes — but only a display no window has used
+  before, so an unplugged TV's picture never moves onto a TV that's in
+  use. If the original comes back, everything returns to it.
 - The canvas's temporary **Show** window can be closed like **Hide** —
   it doesn't delete the canvas.
-- macOS: Mosaic keeps a small log of every display change
-  (`~/Library/Application Support/Cinertia Systems/Mosaic/displays.log`)
-  for troubleshooting. Windows keeps it in Mosaic's app data folder.
+- Mosaic keeps a small log of every display change (`displays.log`) for
+  troubleshooting — macOS:
+  `~/Library/Application Support/Cinertia Systems/Mosaic/`, Windows:
+  `%APPDATA%\Cinertia Systems\Mosaic\`.
 
 **After updating from 0.7.0 or older:** open each canvas's ⋯ menu and
 click its monitor once, and click the main window's fullscreen monitor

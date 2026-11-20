@@ -18,10 +18,15 @@ pull request #1).** Show Mac tested: Always allow the NDI network on, several
 restarts, working. Windows check passed 2026-11-20 (live NDI sources,
 canvas and main-window fullscreen on picked monitors, Always on top while
 fullscreen, restore after restart, no macOS-only switch in Settings).
-Remaining: merge PR #1 (Max's OK), then promote v0.7.1 to a full release
-with the Windows installer and guide PDF (and mark it latest). The macOS
-dmg on the pre-release predates the Windows-only fix (4364296), which
-doesn't change the Mac build's behaviour.
+PR #1 merged into master 2026-11-20 (0a079d6). Windows installer
+`Mosaic-Setup-0.7.1.exe` built from master on the Windows VM (same 1,378
+files as 0.7.0's package; NDI runtime now 6.4.0.2), installed and launched
+there. Guide synced to 0.7.1 (`docs/guide-src`, rendered to PDF with
+headless Edge: `msedge --headless=new --no-pdf-header-footer
+--print-to-pdf=…`); USER-GUIDE now says which display-disconnect behaviour
+is macOS-only (hide/⚠/replaced unit — Windows keeps showing the canvas on
+another display). The macOS dmg on the release predates the Windows-only
+fix (4364296), which doesn't change the Mac build's behaviour.
 
 **0.7.1 Windows check (2026-11-19, Windows 11 ARM VM in Parallels on
 the Mac, building x64).** Built clean with MSVC 19.44 (VS 2022 Build
