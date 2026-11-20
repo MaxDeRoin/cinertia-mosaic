@@ -6,7 +6,11 @@ $root = Split-Path -Parent $PSScriptRoot
 $build = Join-Path $root "build"
 $deploy = Join-Path $root "deploy"
 $cmake = "C:\Program Files\CMake\bin\cmake.exe"
-$windeployqt = "C:\Users\Max\Qt\6.8.3\msvc2022_64\bin\windeployqt.exe"
+# Qt 6.8.3: the dev PC's per-user install, or C:\Qt (the build VM).
+$windeployqt = @("C:\Users\Max\Qt\6.8.3\msvc2022_64\bin\windeployqt.exe",
+                 "C:\Qt\6.8.3\msvc2022_64\bin\windeployqt.exe") |
+    Where-Object { Test-Path $_ } | Select-Object -First 1
+if (-not $windeployqt) { throw "windeployqt not found (Qt 6.8.3 msvc2022_64)" }
 $iscc = "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe"
 
 Write-Host "== Building Release =="
